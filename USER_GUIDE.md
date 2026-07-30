@@ -1,0 +1,349 @@
+# Futures V7.4 — End-User Guide
+
+## 1. What this strategy is
+
+`futures_v7_4.pine` is a TradingView Pine Script v6 **strategy** for testing
+directional futures entries. It combines EMA trend structure, MACD momentum, RSI
+bounds, ATR volatility, and optional relative volume. It also models contract
+sizing, brackets, daily limits, session exits, and a strategy-wide drawdown lock.
+
+The script is designed for **confirmed-bar decisions**. It does not calculate on
+every tick, does not process a new market entry on the signal bar's close, and
+does not use Bar Magnifier. In the broker emulator, a market order therefore
+fills no earlier than the next available tick. This is intentional, but it means
+the signal close shown on the chart is not the assumed fill price.
+
+This is research and execution-modeling code, not financial advice or a
+broker-side risk system. Test it with the exact symbol, contract, session,
+timeframe, costs, and roll method that you expect to use.
+
+## 2. What the code review found
+
+### Signal logic was previously coupled to trade eligibility
+
+An earlier version put volatility, volume, session, and backtest eligibility in
+the setup itself. With `Require New Setup Transition` enabled, a volume or
+session filter changing from false to true could incorrectly look like a new
+technical setup. Conversely, a genuine technical transition could be rejected
+forever because a temporary execution gate was closed on that exact bar.
+
+V7.4 uses a staged pipeline:
+
+1. calculate the technical scores;
+2. identify a directional technical transition;
+3. retain that transition for `Signal Validity Bars`;
+4. independently evaluate ATR, volume, session, and date filters;
+5. independently evaluate position state, cooldown, daily controls, drawdown,
+   and sizing; and
+6. submit an entry only when every execution gate is open.
+
+The retained signal is canceled logically as soon as its underlying directional
+technical setup becomes false. Signal retention therefore handles temporary
+gating; it does not authorize entries after the technical premise disappears.
+
+### Signal-close brackets understated gap risk
+
+A market order created from a confirmed signal normally fills on the next bar.
+An absolute stop calculated around the previous close can have a very different
+distance from that actual fill after a gap. V7.4 stores the confirmed ATR
+distance in ticks and supplies that distance to `strategy.exit` as relative
+`loss` and `profit` values. The displayed stop and target are calculated only
+after the emulator reports the actual average fill.
+
+### Minimum-size overrides could undermine safety limits
+
+V7.4 distinguishes the optional account-risk override from hard limits. Turning
+off `Skip Trade When Minimum Size Exceeds Risk` can permit the configured minimum
+quantity to exceed the normal per-trade percentage budget. It **cannot** bypass
+the enabled remaining-daily-loss-capacity limit or notional-exposure limit.
+
+### Session settings require compatible chart bars
+
+A narrow session window works only if a chart bar opens inside that window.
+V7.4 can reject synthetic charts, non-time-based charts, non-intraday charts, and
+timeframes above a configured maximum. These checks reduce misuse, but they
+cannot prove that a particular bar alignment intersects the exit window.
+
+## 3. Installation
+
+1. Open TradingView and select the intended futures symbol.
+2. Open **Pine Editor**.
+3. Copy the complete contents of `futures_v7_4.pine` into a new script.
+4. Save it, then select **Add to chart**.
+5. Resolve every compiler or runtime error before using Strategy Tester results.
+6. Open **Strategy Tester → Properties** and confirm the initial capital,
+   commission, slippage, margin, order size, and recalculation settings shown by
+   TradingView match the source and your test assumptions.
+7. Open the strategy's **Inputs** and configure every section described below.
+
+Do not concatenate the script with another `//@version` or `strategy()` block.
+There must be one version declaration and one strategy declaration.
+
+## 4. Chart preparation
+
+### Use the correct instrument
+
+- Prefer the exact listed contract when evaluating real execution behavior.
+- Continuous contracts can be useful for research, but back-adjustment and
+  contract rolls can change indicator history, apparent gaps, and P&L.
+- Confirm that TradingView supplies the correct minimum tick and point value.
+  The strategy refuses to run if either value is non-positive.
+
+### Use a standard, time-based intraday chart
+
+The safe default is a normal candlestick or OHLC bar chart. Do not use Heikin
+Ashi, Renko, Kagi, Line Break, Point & Figure, Range, or another synthetic price
+series for execution claims. Keep the timeframe no larger than the configured
+`Maximum Chart Timeframe (Minutes)`.
+
+For a `1550-1555` exit window, verify visually that the selected symbol and
+timeframe actually produce a bar whose opening timestamp is within that window.
+For example, unusual bar alignment or a timeframe wider than the window can miss
+it completely.
+
+## 5. Inputs, section by section
+
+### 1. Trade Direction
+
+- **Enable Long Entries** permits bullish orders.
+- **Enable Short Entries** permits bearish orders.
+
+Disable one side when testing a long-only or short-only mandate. Disabling a side
+does not change how its score is calculated; the opposing score can still stop a
+weaker setup from qualifying.
+
+### 2. Trend
+
+- **Fast/Slow EMA Length** define trend alignment. Fast must be shorter than
+  slow.
+- **EMA Slope Lookback** compares the current fast EMA with its value that many
+  bars ago.
+- **Minimum EMA Separation in ATR** rejects weak EMA separation after normalizing
+  it by current ATR.
+
+A long setup requires fast EMA above slow EMA and a rising fast EMA. A short
+setup requires the inverse.
+
+### 3. Momentum
+
+- **RSI Length** controls RSI smoothing.
+- **Minimum/Maximum RSI** define an allowed band for each direction rather than a
+  single overbought/oversold trigger.
+- **MACD Fast/Slow/Signal Length** control MACD and its histogram.
+
+The RSI minimum must be below its maximum. MACD fast must be below MACD slow.
+
+### 4. Market Filters
+
+- **ATR Length** is used by volatility qualification, stop distance, and sizing.
+- **Minimum ATR as Percent of Price** rejects low-volatility bars.
+- **Use Relative Volume Filter** requires current volume divided by average
+  volume to meet the configured minimum.
+- **Volume Average Length** and **Minimum Relative Volume** configure that test.
+
+If volume filtering is enabled on a symbol without usable volume, entries are
+blocked rather than treating missing data as acceptable.
+
+### 5. Signal Controls
+
+- **Minimum Signal Score** is the score threshold, from 1 through 12.
+- **Require New Setup Transition** requires the technical setup to change from
+  false to true.
+- **Signal Validity Bars** controls how long that fresh event may wait for other
+  gates. `0` means only the transition bar.
+- **Cooldown Bars After Position Closes** delays the next entry after a detected
+  close. The comparison is strict, so a setting of `5` requires more than five
+  bars to have elapsed since the recorded exit bar.
+
+Long and short scores award:
+
+| Condition | Points |
+| --- | ---: |
+| EMA directional alignment | 2 |
+| Fresh EMA directional cross | 2 |
+| Fast EMA directional slope | 1 |
+| Price on directional side of fast EMA | 1 |
+| Minimum EMA/ATR separation | 1 |
+| MACD line on directional side of signal | 1 |
+| MACD histogram directional sign | 1 |
+| MACD histogram improving in that direction | 1 |
+| Fresh MACD directional cross | 1 |
+| RSI inside the directional band | 1 |
+
+In addition to reaching the threshold, a setup must beat the opposing score and
+meet the mandatory alignment, slope, and RSI conditions. The score alone is not
+an entry instruction.
+
+### 6. Position Sizing and Trade Risk
+
+- **Account Risk per Trade (%)** creates the normal cash risk budget from current
+  strategy equity.
+- **Stop-Loss ATR Multiple** converts ATR to a stop distance.
+- **Reward-to-Risk Target** multiplies stop ticks to obtain target ticks.
+- **Minimum/Maximum Contracts** bound order quantity.
+- **Skip Trade When Minimum Size Exceeds Risk** determines whether normal
+  account-risk sizing may be overridden by the minimum quantity.
+- **Entry/Slippage Risk Buffer in Ticks** increases sizing risk but does not move
+  the bracket farther away.
+- **Estimated Round-Trip Commission per Contract** increases sizing risk and is
+  not charged a second time. Keep it at least equal to entry plus exit commission.
+- **Limit Notional Exposure** and **Maximum Notional Exposure** create a hard
+  leverage cap.
+- **Cap New Trade Risk at Remaining Daily Loss Capacity** creates a hard quantity
+  cap from unused daily-loss capacity.
+
+The main calculations are:
+
+```text
+stop ticks = ceil(ATR × stop multiple ÷ minimum tick)
+target ticks = ceil(stop ticks × reward/risk)
+price risk per contract = (stop ticks + buffer ticks)
+                          × minimum tick × point value
+risk per contract = price risk per contract + round-trip commission
+account quantity = floor(account risk budget ÷ risk per contract)
+notional per contract = close × point value
+```
+
+Final quantity is the smallest enabled quantity cap, limited by
+`Maximum Contracts`. If any enabled hard cap cannot support `Minimum Contracts`,
+the displayed calculated quantity becomes zero and the order is rejected.
+
+### 7. Daily Risk Controls
+
+- **Maximum Filled Trades per Day** counts observed transitions from flat to a
+  position.
+- **Daily Loss Limit Mode** selects percentage of starting equity or fixed cash.
+- **Include Open P&L** chooses marked-to-market equity or realized net profit for
+  daily monitoring.
+- **Close Position at Daily Loss Limit** submits a next-tick market close.
+- **Lock Trading for Rest of Risk Day** keeps the daily lock latched after the
+  threshold is first reached.
+- **Strategy Drawdown Lock** compares current strategy equity with the highest
+  strategy equity observed in the run. This lock does not reset each day.
+
+The risk day resets at midnight in `Session and Daily Reset Timezone`. Because
+the strategy evaluates confirmed chart bars, a threshold can be exceeded between
+evaluations. A requested close is also not guaranteed to fill at the threshold.
+
+### 8. Session Management
+
+- **Session and Daily Reset Timezone** must be a valid timezone appropriate for
+  the venue and intended risk day.
+- **Entry Session** gates new entries only.
+- **Session Exit Trigger Window** requests a close on the first confirmed bar
+  detected inside the window.
+- **Cancel Pending Orders at Session Exit** cancels outstanding strategy orders
+  before the close request.
+
+Schedule the exit window early enough to allow next-tick execution. The setting
+does not guarantee that the position is flat by the window's end.
+
+### 9. Backtest Integrity
+
+- **Block Nonstandard Chart Types** should normally remain enabled.
+- **Require Intraday Chart** should remain enabled when session controls matter.
+- **Maximum Chart Timeframe** prevents accidental tests on bars too coarse for
+  the intended execution model.
+- **Backtest Date Range** limits entry eligibility. Start must precede end.
+
+The date filter does not liquidate an already-open position at the end date.
+Existing bracket and administrative exit logic remains responsible for it.
+
+### 10. Display
+
+- **Signal Markers** show bars where an entry order was submitted, not guaranteed
+  fills.
+- **Active Stop and Target** appear after the fill is observed and are derived
+  from the actual average fill.
+- **Dashboard** shows current position, daily P&L, effective risk budget,
+  per-contract risk, calculated quantity, scores, signal age, daily capacity,
+  notional cap, and drawdown-lock state.
+
+`na` in signal age means no qualifying setup event has occurred in the loaded
+history. Zero calculated quantity means at least one enabled sizing constraint
+cannot support the configured minimum quantity.
+
+## 6. Recommended validation workflow
+
+1. **Compile first.** Fix all Pine compiler and runtime errors.
+2. **Verify metadata.** Independently calculate the cash value of one tick as
+   `syminfo.mintick × syminfo.pointvalue` and compare it with the contract spec.
+3. **Verify bar alignment.** Confirm chart bars enter both the entry session and
+   exit window in the selected timezone.
+4. **Use realistic costs.** Synchronize the fixed `$2.50` per-side strategy
+   commission with the sizing estimate and set realistic slippage.
+5. **Inspect individual trades.** Check signal bar, next-tick fill, fill-relative
+   bracket, quantity, commission, and exit reason.
+6. **Test gaps.** Inspect overnight, news, limit, and roll periods rather than
+   relying only on averages.
+7. **Run sensitivity tests.** Change costs, slippage, timeframe, session, and
+   signal-validity assumptions. A robust result should not depend on one exact
+   value.
+8. **Separate development and evaluation data.** Avoid selecting parameters on
+   the same full history used to report performance.
+9. **Forward test.** Use paper trading before considering live execution.
+10. **Reconcile alerts and broker behavior.** Strategy fills are emulator events;
+    independently verify any external alert-to-order integration.
+
+## 7. Troubleshooting
+
+### “Use a standard OHLC chart”
+
+Switch from a synthetic chart to normal candles or bars, or disable the block
+only for visual research. Do not treat synthetic-chart fills as executable.
+
+### “Intraday chart” or “timeframe exceeds maximum”
+
+Choose a time-based intraday interval at or below the configured maximum. Then
+re-check exit-window alignment.
+
+### Strategy shows signals but no trade
+
+The plotted entry marker appears only when an order is submitted. If no marker is
+shown, inspect score, signal age, session, ATR/volume filters, cooldown, daily
+trade count, daily-loss lock, drawdown lock, effective risk budget, notional cap,
+and calculated quantity.
+
+### Calculated quantity is zero
+
+At least one hard cap cannot support one minimum contract. Review risk per
+contract, remaining daily capacity, notional exposure, equity, and the minimum
+contract setting. Do not raise a cap merely to force a trade.
+
+### Session exit did not occur
+
+Check timezone, exchange holidays, session template, timeframe, bar opening
+times, and whether a bar actually opened inside the trigger window. Remember
+that the close order is submitted after the confirmed trigger bar and normally
+fills on the next available tick.
+
+### Results change when timeframe changes
+
+This is expected. EMA, RSI, MACD, ATR, signal validity, cooldown, session
+intersection, and the broker emulator's intrabar assumptions all operate on chart
+bars. A “bar” is not a fixed unit of elapsed time across timeframes.
+
+## 8. Pre-use checklist
+
+- [ ] Pine Editor compiles the unmodified V7.4 source.
+- [ ] Chart is standard, time-based, intraday, and within the maximum timeframe.
+- [ ] Exact contract or continuous-contract methodology is documented.
+- [ ] Tick size and point value match the exchange contract specification.
+- [ ] Commission estimate matches the strategy commission assumption.
+- [ ] Slippage and sizing buffer are realistic for the market and order size.
+- [ ] Timezone, entry session, risk-day reset, and exit bar alignment are verified.
+- [ ] Minimum size does not unintentionally override the normal account-risk cap.
+- [ ] Daily-capacity and notional hard caps behave as expected.
+- [ ] Drawdown lock behavior has been tested on historical losses.
+- [ ] Backtest end behavior and any open position are understood.
+- [ ] Trade-by-trade fills and brackets have been inspected.
+- [ ] Out-of-sample and paper-trading results have been reviewed.
+- [ ] Live broker-side risk controls exist independently of this script.
+
+## 9. Known limitations
+
+The authoritative condensed list of review findings and limitations is maintained
+in `STRATEGY_REVIEW.md`. In particular, no bar-close strategy can guarantee an
+intrabar daily-loss threshold, gap price, partial fill, or live liquidation
+price. TradingView's Pine compiler and broker emulator are authoritative for
+actual script behavior.
