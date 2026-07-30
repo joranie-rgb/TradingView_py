@@ -178,7 +178,9 @@ bool longSignalActive = longTechnicalSetup and not na(barsSinceLongSetup) and ba
 bool shortSignalActive = shortTechnicalSetup and not na(barsSinceShortSetup) and barsSinceShortSetup <= signalValidityBars
 
 bool newPositionOpened = strategy.position_size != 0 and strategy.position_size[1] == 0
-bool positionJustClosed = strategy.position_size == 0 and strategy.position_size[1] != 0
+int cumulativeTradeCount = strategy.opentrades + strategy.closedtrades
+int newlyOpenedTradeCount = math.max(cumulativeTradeCount - nz(cumulativeTradeCount[1], cumulativeTradeCount), 0)
+bool positionJustClosed = strategy.closedtrades > nz(strategy.closedtrades[1], strategy.closedtrades)
 var float dayStartingEquity = na
 var float dayStartingNetProfit = na
 var int tradesToday = 0
@@ -198,8 +200,8 @@ if barstate.isfirst
     peakStrategyEquity := strategy.equity
     maximumDrawdownLocked := false
 peakStrategyEquity := math.max(nz(peakStrategyEquity, strategy.equity), strategy.equity)
-if newPositionOpened
-    tradesToday += 1
+if newlyOpenedTradeCount > 0
+    tradesToday += newlyOpenedTradeCount
 if positionJustClosed
     lastExitBar := bar_index
 
@@ -255,7 +257,7 @@ if sessionExitRequired
         strategy.close_all(comment = "Session Exit", immediately = false)
     sessionExitProcessed := true
 
-bool entryWindowOpen = strategy.position_size == 0 and cooldownComplete and barstate.isconfirmed and executionTimeQualified and indicatorFiltersQualified and not administrativeExitRequested and not dailyTradeLimitReached and not dailyLossEntryLock and not maximumDrawdownLocked and not (useSessionExit and insideSessionExitWindow)
+bool entryWindowOpen = strategy.position_size == 0 and cooldownComplete and barstate.isconfirmed and executionTimeQualified and indicatorFiltersQualified and not administrativeExitRequested and not dailyTradeLimitReached and not dailyLossEntryLock and not maximumDrawdownLocked and not (useSessionExit and insideSessionExitWindow) and not sessionExitProcessed
 bool enterLong = enableLongEntries and entryWindowOpen and longSignalActive and positionSizeQualified
 bool enterShort = enableShortEntries and entryWindowOpen and shortSignalActive and positionSizeQualified
 
