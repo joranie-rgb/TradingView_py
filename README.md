@@ -1,0 +1,50 @@
+# TradingView Futures Strategy V7.4
+
+This repository contains a TradingView Pine Script v6 strategy for researching
+directional futures entries. It combines EMA, MACD, RSI, ATR, and optional
+relative-volume signals with fill-relative brackets, equity-based sizing, daily
+controls, session management, and a permanent peak-equity drawdown lock.
+
+## Repository map
+
+| File | Purpose |
+| --- | --- |
+| [`futures_v7_4.pine`](futures_v7_4.pine) | Authoritative executable strategy source. |
+| [`USER_GUIDE.md`](USER_GUIDE.md) | Installation, complete input reference, formulas, operating workflow, and troubleshooting. |
+| [`STRATEGY_REVIEW.md`](STRATEGY_REVIEW.md) | Code-review findings, execution semantics, safety boundaries, and residual risks. |
+
+If prose and behavior ever differ, the Pine source and TradingView's compiler
+and broker emulator are authoritative. This repository does not contain a Pine
+compiler or an automated execution simulator.
+
+## Quick start
+
+1. Read the [review and limitations](STRATEGY_REVIEW.md).
+2. Follow the [installation and chart-preparation guide](USER_GUIDE.md#3-installation).
+3. Copy the entire Pine file into TradingView's Pine Editor and compile it.
+4. Validate tick value, point value, contract notional, costs, timezone, session
+   intersection, and next-tick fills for the exact symbol and timeframe.
+5. Inspect trades individually and forward-test with paper trading. Do not treat
+   Strategy Tester results as a broker-side risk guarantee.
+
+## Fixed strategy properties
+
+The source declares these baseline properties:
+
+- USD 100,000 initial capital;
+- USD 2.50 cash commission per contract per fill;
+- one tick of modeled broker-emulator slippage;
+- no pyramiding;
+- 100% long and short margin;
+- confirmed-bar calculations, next-tick order processing, and no Bar Magnifier.
+
+TradingView can expose property overrides in the user interface. Record any
+override with the results it produced, and keep the sizing input for estimated
+round-trip commission synchronized with the actual commission model.
+
+## Scope and safety
+
+This is research and execution-modeling code, not financial advice, an alert
+integration, or a broker-side risk system. Daily-loss, drawdown, and session
+exits are market-close requests generated after a qualifying bar is confirmed;
+they are neither intrabar stop orders nor guarantees of the eventual fill.
