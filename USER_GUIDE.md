@@ -230,16 +230,31 @@ affect sizing without widening the bracket.
 
 ### 7. Daily Risk Controls
 
+- **Enable Daily Trade Limit** turns the filled-trade entry gate on or off.
 - **Maximum Filled Trades per Day** counts increases in TradingView's combined
-  open-plus-closed trade records. It counts observed fills, not submitted orders.
+  open-plus-closed trade records. It counts observed fills, not submitted orders,
+  and is enforced only when **Enable Daily Trade Limit** is on.
+- **Enable Daily Loss Limit** turns daily-loss monitoring and its entry gate on
+  or off. It also controls whether **Cap New Trade Risk at Remaining Daily Loss
+  Capacity** can constrain sizing: when the daily-loss limit is off, that sizing
+  cap is inactive even if its own switch is on.
 - **Daily Loss Limit Mode** selects percentage of starting equity or fixed cash.
+- **Maximum Daily Loss (%)** sets the allowance used in **Percent** mode as a
+  percentage of equity at the start of the risk day.
+- **Maximum Daily Loss (Cash)** sets the fixed allowance used in **Cash** mode.
 - **Include Open P&L** chooses marked-to-market equity or realized net profit for
   daily monitoring.
 - **Close Position at Daily Loss Limit** submits a next-tick market close.
 - **Lock Trading for Rest of Risk Day** keeps the daily lock latched after the
   threshold is first reached.
-- **Strategy Drawdown Lock** compares current strategy equity with the highest
-  strategy equity observed in the run. This lock does not reset each day.
+- **Enable Strategy Drawdown Lock** enables a permanent entry lock once the
+  configured peak-to-current-equity threshold is reached.
+- **Maximum Drawdown from Peak Equity (%)** sets that threshold. Drawdown is
+  measured from the highest strategy equity observed in the run, and the lock
+  does not reset each day.
+- **Close Position at Drawdown Limit** submits a next-tick market close for an
+  open position once the drawdown lock is triggered. Turning it off leaves an
+  existing position to other exit logic but does not restore new entries.
 
 The calendar risk day changes at midnight in the configured timezone, but reset
 code runs on the first available chart bar in that new day. If the market is
