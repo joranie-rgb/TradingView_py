@@ -244,6 +244,9 @@ bool dailyLossExitRequired = dailyLossLocked and closePositionAtDailyLoss and st
 bool maximumDrawdownExitRequired = maximumDrawdownLocked and closePositionAtMaximumDrawdown and strategy.position_size != 0 and barstate.isconfirmed
 bool sessionExitRequired = useSessionExit and insideSessionExitWindow and not sessionExitProcessed and barstate.isconfirmed
 bool administrativeExitRequested = dailyLossExitRequired or maximumDrawdownExitRequired or sessionExitRequired
+// A flat strategy can still have a next-tick entry pending. Remember when the
+// session guard cancels it so its frozen plan can be cleared below.
+bool pendingEntryCancelledAtSessionExit = sessionExitRequired and cancelOrdersAtSessionExit and strategy.position_size == 0
 if dailyLossExitRequired
     strategy.cancel_all()
     strategy.close_all(comment = "Daily Loss Exit", immediately = false)
@@ -266,6 +269,11 @@ var int plannedTargetTicks = na
 var int plannedDirection = 0
 var float activeStopPrice = na
 var float activeTargetPrice = na
+
+if pendingEntryCancelledAtSessionExit
+    plannedStopTicks := na
+    plannedTargetTicks := na
+    plannedDirection := 0
 
 if enterLong and not enterShort
     plannedStopTicks := stopTicks

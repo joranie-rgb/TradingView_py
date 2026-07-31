@@ -19,6 +19,35 @@ in TradingView. This is static analysis, not a claim of identical live execution
 
 ## Findings addressed in V7.4
 
+### Verification report
+
+The documentation and source were cross-checked input-by-input and across the
+signal, sizing, daily-control, session, order-lifecycle, and display paths. This
+review found and resolved the following discrepancy:
+
+| Issue ID | Location/File | Description of Discrepancy | Severity (High/Medium/Low) |
+| --- | --- | --- | --- |
+| TV-001 | `futures_v7_4.pine` — session-exit cancellation and planned-order state | When a session exit canceled a pending entry while the strategy was still flat, the frozen stop ticks, target ticks, and direction were not cleared because cleanup only handled a filled position closing. The dashboard could therefore show a plan after its order no longer existed, contrary to the documented display semantics. The session cancellation path now records this lifecycle event and clears all pending-plan state before any new submission is evaluated. | Low |
+
+#### TV-001 resolution
+
+The concrete fix records a flat pending-entry cancellation at the point where
+the session guard is evaluated, then resets the complete frozen plan after its
+state variables are declared:
+
+```pine
+bool pendingEntryCancelledAtSessionExit = sessionExitRequired and cancelOrdersAtSessionExit and strategy.position_size == 0
+
+if pendingEntryCancelledAtSessionExit
+    plannedStopTicks := na
+    plannedTargetTicks := na
+    plannedDirection := 0
+```
+
+No other source/documentation discrepancy was identified by this static review.
+Platform compilation and broker-emulator behavior remain external validation
+requirements, as described under residual risks.
+
 ### 1. Input safety
 
 - Related lengths, RSI bands, contract limits, and backtest dates are checked on
