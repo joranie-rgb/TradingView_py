@@ -15,7 +15,9 @@ the signal close shown on the chart is not the assumed fill price.
 
 This is research and execution-modeling code, not financial advice or a
 broker-side risk system. Test it with the exact symbol, contract, session,
-timeframe, costs, and roll method that you expect to use.
+timeframe, costs, and roll method that you expect to use. The repository's
+`README.md` is the documentation entry point; `STRATEGY_REVIEW.md` records the
+static review findings and residual risks. The Pine source is authoritative.
 
 ## 2. What the code review found
 
@@ -76,6 +78,11 @@ cannot prove that a particular bar alignment intersects the exit window.
    TradingView match the source and your test assumptions.
 7. Open the strategy's **Inputs** and configure every section described below.
 
+The declared defaults are USD 100,000 initial capital, USD 2.50 commission per
+contract per fill, one tick of slippage, no pyramiding, 100% margin, confirmed-bar
+calculation, next-tick processing, and no Bar Magnifier. Document any property
+override and keep the separate round-trip commission sizing input consistent.
+
 Do not concatenate the script with another `//@version` or `strategy()` block.
 There must be one version declaration and one strategy declaration.
 
@@ -128,7 +135,8 @@ setup requires the inverse.
 
 - **RSI Length** controls RSI smoothing.
 - **Minimum/Maximum RSI** define an allowed band for each direction rather than a
-  single overbought/oversold trigger.
+  single trigger. Longs use `minimum ≤ RSI < maximum`; shorts use
+  `minimum < RSI ≤ maximum`.
 - **MACD Fast/Slow/Signal Length** control MACD and its histogram.
 
 The RSI minimum must be below its maximum. MACD fast must be below MACD slow.
@@ -154,6 +162,11 @@ blocked rather than treating missing data as acceptable.
 - **Cooldown Bars After Position Closes** delays the next entry after a detected
   close. The comparison is strict, so a setting of `5` requires more than five
   bars to have elapsed since the recorded exit bar.
+
+When **Require New Setup Transition** is disabled, every bar on which the setup
+remains true is an event. Signal age stays zero and **Signal Validity Bars** has
+no practical limiting effect. With transition mode enabled, a validity of `3`
+permits ages 0 through 3 (four chart bars total), while the setup remains true.
 
 Long and short scores award:
 
@@ -208,22 +221,51 @@ Final quantity is the smallest enabled quantity cap, limited by
 `Maximum Contracts`. If any enabled hard cap cannot support `Minimum Contracts`,
 the displayed calculated quantity becomes zero and the order is rejected.
 
+Notional exposure is not exchange initial margin. At the default 100% cap, one
+contract fails when `close × point value` exceeds current equity. Change this only
+under a documented leverage policy; it is distinct from the strategy's margin
+properties. ATR distance, quantity, and bracket ticks freeze at submission. A
+gap changes neither tick distance nor quantity, and buffer/commission inputs
+affect sizing without widening the bracket.
+
 ### 7. Daily Risk Controls
 
-- **Maximum Filled Trades per Day** counts observed transitions from flat to a
-  position.
+- **Enable Daily Trade Limit** turns the filled-trade entry gate on or off.
+- **Maximum Filled Trades per Day** counts increases in TradingView's combined
+  open-plus-closed trade records. It counts observed fills, not submitted orders,
+  and is enforced only when **Enable Daily Trade Limit** is on.
+- **Enable Daily Loss Limit** turns daily-loss monitoring and its entry gate on
+  or off. It also controls whether **Cap New Trade Risk at Remaining Daily Loss
+  Capacity** can constrain sizing: when the daily-loss limit is off, that sizing
+  cap is inactive even if its own switch is on.
 - **Daily Loss Limit Mode** selects percentage of starting equity or fixed cash.
+- **Maximum Daily Loss (%)** sets the allowance used in **Percent** mode as a
+  percentage of equity at the start of the risk day.
+- **Maximum Daily Loss (Cash)** sets the fixed allowance used in **Cash** mode.
 - **Include Open P&L** chooses marked-to-market equity or realized net profit for
   daily monitoring.
 - **Close Position at Daily Loss Limit** submits a next-tick market close.
 - **Lock Trading for Rest of Risk Day** keeps the daily lock latched after the
   threshold is first reached.
-- **Strategy Drawdown Lock** compares current strategy equity with the highest
-  strategy equity observed in the run. This lock does not reset each day.
+- **Enable Strategy Drawdown Lock** enables a permanent entry lock once the
+  configured peak-to-current-equity threshold is reached.
+- **Maximum Drawdown from Peak Equity (%)** sets that threshold. Drawdown is
+  measured from the highest strategy equity observed in the run, and the lock
+  does not reset each day.
+- **Close Position at Drawdown Limit** submits a next-tick market close for an
+  open position once the drawdown lock is triggered. Turning it off leaves an
+  existing position to other exit logic but does not restore new entries.
 
-The risk day resets at midnight in `Session and Daily Reset Timezone`. Because
-the strategy evaluates confirmed chart bars, a threshold can be exceeded between
-evaluations. A requested close is also not guaranteed to fill at the threshold.
+The calendar risk day changes at midnight in the configured timezone, but reset
+code runs on the first available chart bar in that new day. If the market is
+closed at midnight, the baseline is captured on that first bar. A threshold can
+be exceeded between confirmed-bar evaluations and a close need not fill at it.
+
+The loss threshold always latches an internal flag for the risk day. Disabling
+**Lock Trading for Rest of Risk Day** permits entry after P&L recovery, but does
+not clear that flag: enabled forced liquidation still requests a close for any
+position while it is set. Remaining capacity is allowance plus monitored P&L,
+floored at zero, so profits can raise capacity above the initial allowance.
 
 ### 8. Session Management
 
@@ -236,7 +278,10 @@ evaluations. A requested close is also not guaranteed to fill at the threshold.
   before the close request.
 
 Schedule the exit window early enough to allow next-tick execution. The setting
-does not guarantee that the position is flat by the window's end.
+does not guarantee that the position is flat by the window's end. Membership is
+based on bar opening time. The first confirmed exit-window bar marks the session
+processed even while flat, blocking entries until the next risk day. Daily-loss
+and drawdown exits cancel pending orders; session exit does so only when enabled.
 
 ### 9. Backtest Integrity
 
@@ -247,7 +292,9 @@ does not guarantee that the position is flat by the window's end.
 - **Backtest Date Range** limits entry eligibility. Start must precede end.
 
 The date filter does not liquidate an already-open position at the end date.
-Existing bracket and administrative exit logic remains responsible for it.
+Existing bracket and administrative exit logic remains responsible for it. The
+filter inclusively tests the signal bar's opening time. An order submitted on the
+last eligible bar may fill after the end, and leaving range does not cancel it.
 
 ### 10. Display
 
@@ -261,7 +308,9 @@ Existing bracket and administrative exit logic remains responsible for it.
 
 `na` in signal age means no qualifying setup event has occurred in the loaded
 history. Zero calculated quantity means at least one enabled sizing constraint
-cannot support the configured minimum quantity.
+cannot support the configured minimum quantity. Dashboard sizing values are
+prospective current-bar values, not an audit record of the open trade. Planned
+stop/target ticks clear after the strategy observes the position close.
 
 ## 6. Recommended validation workflow
 
