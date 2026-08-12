@@ -114,9 +114,9 @@ the full evaluation sample.
 - Entry conditions are evaluated on confirmed bars. With
   `process_orders_on_close = true`, submitted market orders are processed on the
   confirmed bar's closing tick, preventing boundary drift before fill.
-- Entry-session and backtest-date tests use the **signal bar's opening time**.
-  Same-close processing keeps the emulator fill on that confirmed bar rather
-  than allowing a pending market entry to cross either boundary.
+- Entry-session and backtest-date tests require both the signal bar's opening and
+  closing timestamps to satisfy their configured boundaries. Same-close
+  processing keeps the emulator fill on that qualified closing tick.
 - Stop and target tick counts are frozen when the entry is submitted. Plotted
   prices are populated after a new position is observed and use
   `strategy.position_avg_price`.
@@ -210,7 +210,8 @@ or environment configuration.
   independently reject stale or out-of-window messages.
 - The cutoff fallback catches the first available confirmed bar that spans or
   follows the configured local cutoff when no bar intersects the narrow exit
-  window. A market closure still delays evaluation until another chart bar exists.
+  window. Its absolute timestamp comparison also handles bars that cross
+  midnight. A market closure still delays evaluation until another chart bar exists.
 - Administrative close requests are immediate on the confirmed closing tick and
   do not first cancel active protective brackets. Neither mechanism guarantees an
   attainable live price.

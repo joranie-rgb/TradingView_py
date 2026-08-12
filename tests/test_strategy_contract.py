@@ -51,7 +51,23 @@ class StrategyContractTests(unittest.TestCase):
 
     def test_session_exit_has_bar_alignment_fallback(self) -> None:
         self.assertIn("useSessionExitCutoffFallback and barReachesSessionExitCutoff", SOURCE)
-        self.assertIn("localBarCloseMinute >= sessionExitCutoffMinuteOfDay", SOURCE)
+        self.assertIn("int sessionExitCutoffTimestamp = timestamp(sessionTimezone", SOURCE)
+        self.assertIn("time_close >= sessionExitCutoffTimestamp", SOURCE)
+        self.assertNotIn("localBarCloseMinute", SOURCE)
+
+    def test_entry_boundaries_include_the_closing_tick(self) -> None:
+        self.assertIn(
+            "time >= backtestStartTime and time_close <= backtestEndTime", SOURCE
+        )
+        self.assertIn(
+            "not na(time_close(timeframe.period, entrySession, sessionTimezone))",
+            SOURCE,
+        )
+        self.assertIn(
+            "insideEntrySession = barOpensInsideEntrySession and "
+            "barClosesInsideEntrySession",
+            SOURCE,
+        )
 
     def test_administrative_closes_are_immediate_and_do_not_cancel_brackets(self) -> None:
         section = SOURCE[SOURCE.index("if dailyLossExitRequired") : SOURCE.index("bool entryWindowOpen")]

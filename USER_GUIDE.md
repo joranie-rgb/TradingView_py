@@ -9,8 +9,9 @@ sizing, brackets, daily limits, session exits, and a strategy-wide drawdown lock
 
 The script is designed for **confirmed-bar decisions**. It does not calculate on
 every tick, processes market orders on the confirmed signal bar's closing tick,
-and does not use Bar Magnifier. Same-close processing prevents an eligible order
-from drifting outside its approved session or date boundary before fill, but the
+and does not use Bar Magnifier. An entry bar's opening and closing timestamps
+must both satisfy its session and date gates, and same-close processing prevents
+the eligible order from drifting beyond that closing boundary before fill. The
 emulator fill is still not a guarantee of an attainable live price.
 
 This is research and execution-modeling code, not financial advice or a
@@ -289,8 +290,10 @@ allowance.
 Keep the cutoff fallback enabled so the first confirmed bar reaching or after the
 cutoff triggers even when no bar opens in the narrow window. The request is
 processed on the trigger bar's closing tick, but its live attainability and price
-are not guaranteed. The first confirmed exit-window or cutoff bar marks the
-session processed even while flat, blocking entries until the next risk day.
+are not guaranteed. Absolute timestamps allow a bar that opens before midnight
+and closes after midnight to detect a cutoff it spans. The first confirmed
+exit-window or cutoff bar marks the session processed even while flat, blocking
+entries until the next risk day.
 
 ### 9. Backtest Integrity
 
@@ -302,9 +305,11 @@ session processed even while flat, blocking entries until the next risk day.
 
 The date filter does not liquidate an already-open position at the end date.
 Existing bracket and administrative exit logic remains responsible for it. The
-filter inclusively tests the signal bar's opening time. Same-close order
-processing keeps an emulator entry submitted on the last eligible bar from
-drifting into a later bar, but a live alert consumer must enforce its own cutoff.
+filter requires the signal bar to open at or after the start and close at or
+before the end. The entry-session gate similarly requires both endpoints to be
+inside the configured session. Same-close order processing then keeps an emulator
+entry on that eligible closing tick, but a live alert consumer must enforce its
+own cutoff.
 
 ### 10. Display
 

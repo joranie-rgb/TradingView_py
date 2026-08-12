@@ -18,8 +18,9 @@ strategy(
 )
 
 // This revision deliberately uses only confirmed chart bars. Market orders are
-// processed on that bar's closing tick so an eligible entry cannot drift beyond
-// its approved session or backtest boundary before the emulator fills it.
+// processed on that bar's closing tick. Both bar endpoints must remain inside
+// the approved session and backtest range, so the closing-tick fill cannot drift
+// beyond either configured boundary.
 
 string GROUP_DIRECTION = "1. Trade Direction"
 string GROUP_TREND = "2. Trend"
@@ -136,15 +137,18 @@ if barstate.isfirst and chartTimeframeSeconds > maximumChartTimeframeMinutes * 6
 if barstate.isfirst and (syminfo.mintick <= 0 or syminfo.pointvalue <= 0)
     runtime.error("The chart symbol must provide positive minimum-tick and point-value metadata.")
 
-bool insideBacktestRange = not useBacktestDateFilter or time >= backtestStartTime and time <= backtestEndTime
+bool insideBacktestRange = not useBacktestDateFilter or time >= backtestStartTime and time_close <= backtestEndTime
 int currentRiskDay = time("1D", "0000-2359", sessionTimezone)
 bool newRiskDay = not na(currentRiskDay[1]) and currentRiskDay != currentRiskDay[1]
-bool insideEntrySession = not na(time(timeframe.period, entrySession, sessionTimezone))
+bool barOpensInsideEntrySession = not na(time(timeframe.period, entrySession, sessionTimezone))
+bool barClosesInsideEntrySession = not na(time_close(timeframe.period, entrySession, sessionTimezone))
+bool insideEntrySession = barOpensInsideEntrySession and barClosesInsideEntrySession
 bool insideSessionExitWindow = not na(time(timeframe.period, sessionExitWindow, sessionTimezone))
-int localBarMinute = hour(time, sessionTimezone) * 60 + minute(time, sessionTimezone)
-int localBarCloseMinute = hour(time_close, sessionTimezone) * 60 + minute(time_close, sessionTimezone)
-int sessionExitCutoffMinuteOfDay = sessionExitCutoffHour * 60 + sessionExitCutoffMinute
-bool barReachesSessionExitCutoff = localBarMinute >= sessionExitCutoffMinuteOfDay or localBarMinute < sessionExitCutoffMinuteOfDay and localBarCloseMinute >= sessionExitCutoffMinuteOfDay
+int sessionExitCutoffTimestamp = timestamp(sessionTimezone, year(time, sessionTimezone), month(time, sessionTimezone), dayofmonth(time, sessionTimezone), sessionExitCutoffHour, sessionExitCutoffMinute)
+// Anchor the cutoff to the bar-open calendar date and compare absolute times.
+// Unlike minute-of-day arithmetic, this catches a 23:30-00:30 bar spanning a
+// 23:50 cutoff while keeping an after-midnight bar below the new day's cutoff.
+bool barReachesSessionExitCutoff = time_close >= sessionExitCutoffTimestamp
 
 float emaFast = ta.ema(close, emaFastLength)
 float emaSlow = ta.ema(close, emaSlowLength)
