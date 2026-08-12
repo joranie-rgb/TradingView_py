@@ -11,14 +11,16 @@ strategy(
      slippage = 1,
      calc_on_order_fills = false,
      calc_on_every_tick = false,
-     process_orders_on_close = false,
+     process_orders_on_close = true,
      use_bar_magnifier = false,
      margin_long = 100,
      margin_short = 100
 )
 
-// This revision deliberately uses only confirmed chart bars. Orders therefore
-// fill no earlier than the next available tick in TradingView's broker emulator.
+// This revision deliberately uses only confirmed chart bars. Market orders are
+// processed on that bar's closing tick. Both bar endpoints must remain inside
+// the approved session and backtest range, so the closing-tick fill cannot drift
+// beyond either configured boundary.
 
 string GROUP_DIRECTION = "1. Trade Direction"
 string GROUP_TREND = "2. Trend"
@@ -92,6 +94,10 @@ bool useEntrySession = input.bool(true, "Restrict Entries to Session", group = G
 string entrySession = input.session("0930-1545", "Entry Session", group = GROUP_SESSION)
 bool useSessionExit = input.bool(true, "Enable Forced Session Exit", group = GROUP_SESSION)
 string sessionExitWindow = input.session("1550-1555", "Session Exit Trigger Window", group = GROUP_SESSION)
+bool useSessionExitCutoffFallback = input.bool(true, "Use Session Exit Cutoff Fallback", group = GROUP_SESSION,
+     tooltip = "Also exits on the first confirmed bar at or after the cutoff. This prevents a narrow trigger window from being missed by chart-bar alignment.")
+int sessionExitCutoffHour = input.int(15, "Session Exit Cutoff Hour", minval = 0, maxval = 23, group = GROUP_SESSION)
+int sessionExitCutoffMinute = input.int(50, "Session Exit Cutoff Minute", minval = 0, maxval = 59, group = GROUP_SESSION)
 bool cancelOrdersAtSessionExit = input.bool(true, "Cancel Pending Orders at Session Exit", group = GROUP_SESSION)
 
 bool blockNonStandardCharts = input.bool(true, "Block Nonstandard Chart Types", group = GROUP_BACKTEST)
@@ -131,11 +137,18 @@ if barstate.isfirst and chartTimeframeSeconds > maximumChartTimeframeMinutes * 6
 if barstate.isfirst and (syminfo.mintick <= 0 or syminfo.pointvalue <= 0)
     runtime.error("The chart symbol must provide positive minimum-tick and point-value metadata.")
 
-bool insideBacktestRange = not useBacktestDateFilter or time >= backtestStartTime and time <= backtestEndTime
+bool insideBacktestRange = not useBacktestDateFilter or time >= backtestStartTime and time_close <= backtestEndTime
 int currentRiskDay = time("1D", "0000-2359", sessionTimezone)
 bool newRiskDay = not na(currentRiskDay[1]) and currentRiskDay != currentRiskDay[1]
-bool insideEntrySession = not na(time(timeframe.period, entrySession, sessionTimezone))
+bool barOpensInsideEntrySession = not na(time(timeframe.period, entrySession, sessionTimezone))
+bool barClosesInsideEntrySession = not na(time_close(timeframe.period, entrySession, sessionTimezone))
+bool insideEntrySession = barOpensInsideEntrySession and barClosesInsideEntrySession
 bool insideSessionExitWindow = not na(time(timeframe.period, sessionExitWindow, sessionTimezone))
+int sessionExitCutoffTimestamp = timestamp(sessionTimezone, year(time, sessionTimezone), month(time, sessionTimezone), dayofmonth(time, sessionTimezone), sessionExitCutoffHour, sessionExitCutoffMinute)
+// Anchor the cutoff to the bar-open calendar date and compare absolute times.
+// Unlike minute-of-day arithmetic, this catches a 23:30-00:30 bar spanning a
+// 23:50 cutoff while keeping an after-midnight bar below the new day's cutoff.
+bool barReachesSessionExitCutoff = time_close >= sessionExitCutoffTimestamp
 
 float emaFast = ta.ema(close, emaFastLength)
 float emaSlow = ta.ema(close, emaSlowLength)
@@ -240,24 +253,28 @@ bool minimumPositionWithinRisk = riskBasedContracts >= minimumContracts
 bool hardRiskCapsQualified = dailyCapacityContracts >= minimumContracts and notionalBasedContracts >= minimumContracts
 bool positionSizeQualified = calculationsReady and stopTicks > 0 and effectiveRiskBudget > 0 and allowedContracts >= minimumContracts and hardRiskCapsQualified and (not skipTradeWhenRiskTooHigh or minimumPositionWithinRisk)
 
-bool dailyLossExitRequired = dailyLossLocked and closePositionAtDailyLoss and strategy.position_size != 0 and barstate.isconfirmed
+// In non-latching mode, recovery above the threshold re-enables both entries
+// and normal position management. Use the same effective lock for liquidation;
+// the historical latch is intentionally relevant only when the user requests a
+// rest-of-day lock.
+bool dailyLossExitRequired = dailyLossEntryLock and closePositionAtDailyLoss and strategy.position_size != 0 and barstate.isconfirmed
 bool maximumDrawdownExitRequired = maximumDrawdownLocked and closePositionAtMaximumDrawdown and strategy.position_size != 0 and barstate.isconfirmed
-bool sessionExitRequired = useSessionExit and insideSessionExitWindow and not sessionExitProcessed and barstate.isconfirmed
+bool sessionExitTrigger = insideSessionExitWindow or useSessionExitCutoffFallback and barReachesSessionExitCutoff
+bool sessionExitRequired = useSessionExit and sessionExitTrigger and not sessionExitProcessed and barstate.isconfirmed
 bool administrativeExitRequested = dailyLossExitRequired or maximumDrawdownExitRequired or sessionExitRequired
-// A flat strategy can still have a next-tick entry pending. Remember when the
-// session guard cancels it so its frozen plan can be cleared below.
+// A flat strategy can still have an unfilled order. Remember when the session
+// guard cancels it so its frozen plan can be cleared below.
 bool pendingEntryCancelledAtSessionExit = sessionExitRequired and cancelOrdersAtSessionExit and strategy.position_size == 0
 if dailyLossExitRequired
-    strategy.cancel_all()
-    strategy.close_all(comment = "Daily Loss Exit", immediately = false)
+    // Keep protective brackets working until the immediate close is processed.
+    strategy.close_all(comment = "Daily Loss Exit", immediately = true, alert_message = "DAILY_LOSS_EXIT")
 if maximumDrawdownExitRequired
-    strategy.cancel_all()
-    strategy.close_all(comment = "Maximum Drawdown Exit", immediately = false)
+    strategy.close_all(comment = "Maximum Drawdown Exit", immediately = true, alert_message = "MAXIMUM_DRAWDOWN_EXIT")
 if sessionExitRequired
-    if cancelOrdersAtSessionExit
+    if cancelOrdersAtSessionExit and strategy.position_size == 0
         strategy.cancel_all()
     if strategy.position_size != 0
-        strategy.close_all(comment = "Session Exit", immediately = false)
+        strategy.close_all(comment = "Session Exit", immediately = true, alert_message = "SESSION_EXIT")
     sessionExitProcessed := true
 
 bool entryWindowOpen = strategy.position_size == 0 and cooldownComplete and barstate.isconfirmed and executionTimeQualified and indicatorFiltersQualified and not administrativeExitRequested and not dailyTradeLimitReached and not dailyLossEntryLock and not maximumDrawdownLocked and not (useSessionExit and insideSessionExitWindow) and not sessionExitProcessed
@@ -279,16 +296,16 @@ if enterLong and not enterShort
     plannedStopTicks := stopTicks
     plannedTargetTicks := targetTicks
     plannedDirection := 1
-    strategy.entry("Long", strategy.long, qty = calculatedContracts, comment = "Long Entry")
+    strategy.entry("Long", strategy.long, qty = calculatedContracts, comment = "Long Entry", alert_message = "LONG_ENTRY")
     // loss/profit are tick distances from the actual fill, avoiding the V7.2
-    // signal-close anchoring bug when the next bar gaps.
+    // signal-close anchoring bug when slippage changes the modeled fill.
     strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop")
 
 if enterShort and not enterLong
     plannedStopTicks := stopTicks
     plannedTargetTicks := targetTicks
     plannedDirection := -1
-    strategy.entry("Short", strategy.short, qty = calculatedContracts, comment = "Short Entry")
+    strategy.entry("Short", strategy.short, qty = calculatedContracts, comment = "Short Entry", alert_message = "SHORT_ENTRY")
     strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop")
 
 if newPositionOpened and plannedDirection == 1
@@ -317,7 +334,14 @@ plot(showRiskLevels and strategy.position_size != 0 ? activeTargetPrice : na, "F
 plotshape(showSignalMarkers and enterLong and not enterShort, "Long Signal", shape.labelup, location.belowbar, color.green, text = "LONG", textcolor = color.white)
 plotshape(showSignalMarkers and enterShort and not enterLong, "Short Signal", shape.labeldown, location.abovebar, color.red, text = "SHORT", textcolor = color.white)
 
-var table dashboard = table.new(position.top_right, 2, 13, border_width = 1)
+if enterLong and not enterShort
+    alert("LONG_ENTRY", alert.freq_once_per_bar_close)
+if enterShort and not enterLong
+    alert("SHORT_ENTRY", alert.freq_once_per_bar_close)
+if administrativeExitRequested
+    alert("ADMINISTRATIVE_EXIT", alert.freq_once_per_bar_close)
+
+var table dashboard = table.new(position.top_right, 2, 14, border_width = 1)
 if barstate.islast
     if showDashboard
         table.cell(dashboard, 0, 0, "Metric", bgcolor = color.gray, text_color = color.white)
@@ -346,5 +370,7 @@ if barstate.islast
         table.cell(dashboard, 1, 11, str.tostring(notionalBasedContracts))
         table.cell(dashboard, 0, 12, "Drawdown / lock")
         table.cell(dashboard, 1, 12, str.tostring(strategyDrawdownPercent, "#.00") + "% / " + (maximumDrawdownLocked ? "LOCKED" : "OPEN"), text_color = maximumDrawdownLocked ? color.red : color.green)
+        table.cell(dashboard, 0, 13, "Tick / point / tick value")
+        table.cell(dashboard, 1, 13, str.tostring(syminfo.mintick) + " / " + str.tostring(syminfo.pointvalue) + " / " + str.tostring(syminfo.mintick * syminfo.pointvalue, "#.########"))
     else
-        table.clear(dashboard, 0, 0, 1, 12)
+        table.clear(dashboard, 0, 0, 1, 13)
