@@ -8,10 +8,10 @@ bounds, ATR volatility, and optional relative volume. It also models contract
 sizing, brackets, daily limits, session exits, and a strategy-wide drawdown lock.
 
 The script is designed for **confirmed-bar decisions**. It does not calculate on
-every tick, does not process a new market entry on the signal bar's close, and
-does not use Bar Magnifier. In the broker emulator, a market order therefore
-fills no earlier than the next available tick. This is intentional, but it means
-the signal close shown on the chart is not the assumed fill price.
+every tick, processes market orders on the confirmed signal bar's closing tick,
+and does not use Bar Magnifier. Same-close processing prevents an eligible order
+from drifting outside its approved session or date boundary before fill, but the
+emulator fill is still not a guarantee of an attainable live price.
 
 This is research and execution-modeling code, not financial advice or a
 broker-side risk system. Test it with the exact symbol, contract, session,
@@ -43,14 +43,13 @@ The retained signal is canceled logically as soon as its underlying directional
 technical setup becomes false. Signal retention therefore handles temporary
 gating; it does not authorize entries after the technical premise disappears.
 
-### Signal-close brackets understated gap risk
+### Brackets must be relative to the actual fill
 
-A market order created from a confirmed signal normally fills on the next bar.
-An absolute stop calculated around the previous close can have a very different
-distance from that actual fill after a gap. V7.4 stores the confirmed ATR
-distance in ticks and supplies that distance to `strategy.exit` as relative
-`loss` and `profit` values. The displayed stop and target are calculated only
-after the emulator reports the actual average fill.
+Even with closing-tick processing, an absolute stop calculated around the signal
+close can differ from its intended distance when modeled slippage changes the
+fill. V7.4 stores the confirmed ATR distance in ticks and supplies it to
+`strategy.exit` as relative `loss` and `profit` values. The displayed stop and
+target are calculated only after the emulator reports the actual average fill.
 
 ### Minimum-size overrides could undermine safety limits
 
@@ -61,10 +60,11 @@ the enabled remaining-daily-loss-capacity limit or notional-exposure limit.
 
 ### Session settings require compatible chart bars
 
-A narrow session window works only if a chart bar opens inside that window.
-V7.4 can reject synthetic charts, non-time-based charts, non-intraday charts, and
-timeframes above a configured maximum. These checks reduce misuse, but they
-cannot prove that a particular bar alignment intersects the exit window.
+A narrow session window works only if a chart bar opens inside it. V7.4 therefore
+adds an enabled-by-default local-time cutoff fallback that triggers on the first
+confirmed bar at or after the cutoff. It also rejects synthetic charts,
+non-time-based charts, non-intraday charts, and timeframes above a configured
+maximum. No bar-based strategy can act while the market produces no bar.
 
 ## 3. Installation
 
@@ -79,9 +79,10 @@ cannot prove that a particular bar alignment intersects the exit window.
 7. Open the strategy's **Inputs** and configure every section described below.
 
 The declared defaults are USD 100,000 initial capital, USD 2.50 commission per
-contract per fill, one tick of slippage, no pyramiding, 100% margin, confirmed-bar
-calculation, next-tick processing, and no Bar Magnifier. Document any property
-override and keep the separate round-trip commission sizing input consistent.
+contract per fill, one tick of slippage, no pyramiding, 100% margin, confirmed-
+bar calculation, same-close market-order processing, and no Bar Magnifier.
+Document any property override and keep the separate round-trip commission sizing
+input consistent.
 
 Do not concatenate the script with another `//@version` or `strategy()` block.
 There must be one version declaration and one strategy declaration.
@@ -103,10 +104,10 @@ Ashi, Renko, Kagi, Line Break, Point & Figure, Range, or another synthetic price
 series for execution claims. Keep the timeframe no larger than the configured
 `Maximum Chart Timeframe (Minutes)`.
 
-For a `1550-1555` exit window, verify visually that the selected symbol and
-timeframe actually produce a bar whose opening timestamp is within that window.
-For example, unusual bar alignment or a timeframe wider than the window can miss
-it completely.
+For a `1550-1555` exit window, verify visually whether the selected symbol and
+timeframe produce a bar whose opening timestamp is within that window. If not,
+the default 15:50 cutoff fallback triggers on the first later bar. Verify that
+this fallback bar is still early enough for the intended operating policy.
 
 ## 5. Inputs, section by section
 
@@ -244,7 +245,7 @@ affect sizing without widening the bracket.
 - **Maximum Daily Loss (Cash)** sets the fixed allowance used in **Cash** mode.
 - **Include Open P&L** chooses marked-to-market equity or realized net profit for
   daily monitoring.
-- **Close Position at Daily Loss Limit** submits a next-tick market close.
+- **Close Position at Daily Loss Limit** submits an immediate closing-tick market request.
 - **Lock Trading for Rest of Risk Day** keeps the daily lock latched after the
   threshold is first reached.
 - **Enable Strategy Drawdown Lock** enables a permanent entry lock once the
@@ -252,7 +253,7 @@ affect sizing without widening the bracket.
 - **Maximum Drawdown from Peak Equity (%)** sets that threshold. Drawdown is
   measured from the highest strategy equity observed in the run, and the lock
   does not reset each day.
-- **Close Position at Drawdown Limit** submits a next-tick market close for an
+- **Close Position at Drawdown Limit** submits an immediate closing-tick market request for an
   open position once the drawdown lock is triggered. Turning it off leaves an
   existing position to other exit logic but does not restore new entries.
 
@@ -261,11 +262,13 @@ code runs on the first available chart bar in that new day. If the market is
 closed at midnight, the baseline is captured on that first bar. A threshold can
 be exceeded between confirmed-bar evaluations and a close need not fill at it.
 
-The loss threshold always latches an internal flag for the risk day. Disabling
-**Lock Trading for Rest of Risk Day** permits entry after P&L recovery, but does
-not clear that flag: enabled forced liquidation still requests a close for any
-position while it is set. Remaining capacity is allowance plus monitored P&L,
-floored at zero, so profits can raise capacity above the initial allowance.
+The loss threshold records an internal flag for the risk day. When **Lock Trading
+for Rest of Risk Day** is enabled, that flag blocks entries and causes enabled
+forced liquidation for the rest of the day. When it is disabled, both the entry
+gate and forced-liquidation condition follow the current threshold instead, so
+P&L recovery restores normal operation. Remaining capacity is allowance plus
+monitored P&L, floored at zero, so profits can raise capacity above the initial
+allowance.
 
 ### 8. Session Management
 
@@ -274,14 +277,20 @@ floored at zero, so profits can raise capacity above the initial allowance.
 - **Entry Session** gates new entries only.
 - **Session Exit Trigger Window** requests a close on the first confirmed bar
   detected inside the window.
+- **Use Session Exit Cutoff Fallback** also triggers the exit on the first
+  confirmed bar that reaches, spans, or begins after the configured local cutoff.
+- **Session Exit Cutoff Hour/Minute** define that fallback in the session
+  timezone using a 24-hour clock. Keep the cutoff aligned with the start of the
+  trigger window unless a deliberately later fallback is required.
 - **Cancel Pending Orders at Session Exit** cancels outstanding strategy orders
-  before the close request.
+  while flat. For an open position, protective brackets remain active while the
+  immediate administrative close is processed.
 
-Schedule the exit window early enough to allow next-tick execution. The setting
-does not guarantee that the position is flat by the window's end. Membership is
-based on bar opening time. The first confirmed exit-window bar marks the session
-processed even while flat, blocking entries until the next risk day. Daily-loss
-and drawdown exits cancel pending orders; session exit does so only when enabled.
+Keep the cutoff fallback enabled so the first confirmed bar reaching or after the
+cutoff triggers even when no bar opens in the narrow window. The request is
+processed on the trigger bar's closing tick, but its live attainability and price
+are not guaranteed. The first confirmed exit-window or cutoff bar marks the
+session processed even while flat, blocking entries until the next risk day.
 
 ### 9. Backtest Integrity
 
@@ -293,8 +302,9 @@ and drawdown exits cancel pending orders; session exit does so only when enabled
 
 The date filter does not liquidate an already-open position at the end date.
 Existing bracket and administrative exit logic remains responsible for it. The
-filter inclusively tests the signal bar's opening time. An order submitted on the
-last eligible bar may fill after the end, and leaving range does not cancel it.
+filter inclusively tests the signal bar's opening time. Same-close order
+processing keeps an emulator entry submitted on the last eligible bar from
+drifting into a later bar, but a live alert consumer must enforce its own cutoff.
 
 ### 10. Display
 
@@ -304,7 +314,9 @@ last eligible bar may fill after the end, and leaving range does not cancel it.
   from the actual average fill.
 - **Dashboard** shows current position, daily P&L, effective risk budget,
   per-contract risk, calculated quantity, scores, signal age, daily capacity,
-  notional cap, and drawdown-lock state.
+  notional cap, drawdown-lock state, and TradingView's reported minimum tick,
+  point value, and cash tick value. Compare all three metadata values with the
+  venue's contract specification; display does not prove that the feed is right.
 
 `na` in signal age means no qualifying setup event has occurred in the loaded
 history. Zero calculated quantity means at least one enabled sizing constraint
@@ -321,7 +333,7 @@ stop/target ticks clear after the strategy observes the position close.
    exit window in the selected timezone.
 4. **Use realistic costs.** Synchronize the fixed `$2.50` per-side strategy
    commission with the sizing estimate and set realistic slippage.
-5. **Inspect individual trades.** Check signal bar, next-tick fill, fill-relative
+5. **Inspect individual trades.** Check signal bar, same-close fill, fill-relative
    bracket, quantity, commission, and exit reason.
 6. **Test gaps.** Inspect overnight, news, limit, and roll periods rather than
    relying only on averages.
@@ -332,7 +344,14 @@ stop/target ticks clear after the strategy observes the position close.
    the same full history used to report performance.
 9. **Forward test.** Use paper trading before considering live execution.
 10. **Reconcile alerts and broker behavior.** Strategy fills are emulator events;
-    independently verify any external alert-to-order integration.
+    independently verify any external alert-to-order integration. Create a
+    TradingView strategy alert that includes order-fill events and/or `alert()`
+    calls as required. Order fill messages are `LONG_ENTRY`, `SHORT_ENTRY`,
+    `DAILY_LOSS_EXIT`, `MAXIMUM_DRAWDOWN_EXIT`, and `SESSION_EXIT`; generic
+    administrative `alert()` calls emit `ADMINISTRATIVE_EXIT`. Treat all alert
+    payloads as untrusted, authenticate the receiver, reject duplicates/stale
+    timestamps, enforce session and quantity limits again, and reconcile broker
+    acknowledgements and fills outside this script.
 
 ## 7. Troubleshooting
 
@@ -363,8 +382,8 @@ contract setting. Do not raise a cap merely to force a trade.
 
 Check timezone, exchange holidays, session template, timeframe, bar opening
 times, and whether a bar actually opened inside the trigger window. Remember
-that the close order is submitted after the confirmed trigger bar and normally
-fills on the next available tick.
+that the immediate close is submitted after the confirmed trigger bar and is processed on
+that bar's closing tick by the emulator.
 
 ### Results change when timeframe changes
 

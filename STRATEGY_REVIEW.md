@@ -1,7 +1,8 @@
 # Code Review of Futures Strategy V7.4
 
 `futures_v7_4.pine` is the reviewed successor to V7.3. It uses confirmed chart
-bars, next-tick order execution, and no higher-timeframe or future-data requests.
+bars, same-close market-order execution, and no higher-timeframe or future-data
+requests.
 For installation, input behavior, formulas, troubleshooting, and a pre-use
 checklist, see `USER_GUIDE.md`.
 
@@ -28,6 +29,9 @@ review found and resolved the following discrepancy:
 | Issue ID | Location/File | Description of Discrepancy | Severity (High/Medium/Low) |
 | --- | --- | --- | --- |
 | TV-001 | `futures_v7_4.pine` — session-exit cancellation and planned-order state | When a session exit canceled a pending entry while the strategy was still flat, the frozen stop ticks, target ticks, and direction were not cleared because cleanup only handled a filled position closing. The dashboard could therefore show a plan after its order no longer existed, contrary to the documented display semantics. The session cancellation path now records this lifecycle event and clears all pending-plan state before any new submission is evaluated. | Low |
+| TV-002 | `futures_v7_4.pine` — non-latching daily-loss liquidation | The entry gate followed the current threshold when the rest-of-day lock was disabled, but forced liquidation followed the internal historical latch. After P&L recovered, a permitted new position was therefore closed on its next confirmed bar even though the daily limit was no longer breached. Liquidation now uses the same effective lock as entry eligibility. | Medium |
+| TV-003 | `futures_v7_4.pine` — boundary and administrative-order lifecycle | Next-tick entries could fill after an approved session/date boundary, narrow exit windows could be missed by bar alignment, and administrative exits canceled protective brackets before their market close could fill. Entries now process on the confirmed signal close, session exits detect a bar spanning or following the cutoff, and administrative closes are immediate while existing brackets remain active. | High |
+| TV-004 | `futures_v7_4.pine` — external event visibility | The strategy exposed no explicit machine-readable event names for an alert consumer. Entry and administrative events now emit stable `alert()` payloads, and order-generating calls provide stable `alert_message` values. Authentication, idempotency, broker reconciliation, and partial-fill management remain responsibilities of an external service. | Medium |
 
 #### TV-001 resolution
 
@@ -108,11 +112,11 @@ the full evaluation sample.
 ### Entries and brackets
 
 - Entry conditions are evaluated on confirmed bars. With
-  `process_orders_on_close = false`, a submitted market order normally becomes
-  eligible on the next available tick.
+  `process_orders_on_close = true`, submitted market orders are processed on the
+  confirmed bar's closing tick, preventing boundary drift before fill.
 - Entry-session and backtest-date tests use the **signal bar's opening time**.
-  They do not constrain the eventual fill. A pending order is not canceled merely
-  because the next bar is outside either window.
+  Same-close processing keeps the emulator fill on that confirmed bar rather
+  than allowing a pending market entry to cross either boundary.
 - Stop and target tick counts are frozen when the entry is submitted. Plotted
   prices are populated after a new position is observed and use
   `strategy.position_avg_price`.
@@ -131,10 +135,10 @@ the full evaluation sample.
   `strategy.equity`.
 - Filled-trade counting uses the increase in open-plus-closed trade records, not
   submitted signals. It updates after the emulator exposes a fill.
-- Crossing the daily-loss threshold always latches internal `dailyLossLocked`
-  for that risk day. Turning off **Lock Trading for Rest of Risk Day** allows
-  entries after monitored P&L recovers, but enabled forced liquidation continues
-  to request an exit for any position while the internal latch remains set.
+- Crossing the daily-loss threshold records internal `dailyLossLocked` for that
+  risk day. With **Lock Trading for Rest of Risk Day** enabled, entry blocking
+  and forced liquidation follow that latch. With it disabled, both behaviors
+  follow the current threshold and normal operation resumes after P&L recovery.
 - Remaining daily-loss capacity is
   `max(daily loss allowance + monitored daily P&L, 0)`. Profits can therefore
   increase it above the original allowance.
@@ -144,9 +148,10 @@ the full evaluation sample.
 - The first confirmed bar opening in the exit window marks the session exit as
   processed even if no position exists. Entries then remain blocked until the
   next risk-day reset.
-- Daily-loss and drawdown exits cancel protective orders before submitting a
-  next-tick `close_all` market request. A session exit does so only when its
-  cancellation option is enabled. These are not broker-side intrabar controls.
+- Daily-loss and drawdown exits submit an immediate same-closing-tick `close_all`
+  request while leaving protective brackets active
+  until processing. A flat pending session order is canceled when configured.
+  These remain emulator actions, not broker-side intrabar controls.
 - Peak equity and drawdown are sampled on chart evaluations and include open P&L.
   Once reached, the drawdown lock never resets during the run, even if forced
   liquidation is disabled.
@@ -168,30 +173,52 @@ the full evaluation sample.
   calendar changes, not at an independently evaluated midnight tick.
 - Distinguished signal submission, pending market orders, observed fills, and
   filled-trade counting.
-- Documented the persistent internal daily-loss latch and the narrower effect of
-  disabling its entry lock.
-- Documented that session/date eligibility applies to submission, not fill, and
-  that the date filter does not cancel a pending order.
+- Documented how the internal daily-loss latch controls both entries and forced
+  liquidation only when the rest-of-day lock is enabled.
+- Documented that session/date eligibility is evaluated on the confirmed signal
+  bar and same-close processing prevents emulator boundary drift.
 - Added exact RSI boundaries, signal-validity behavior without transition mode,
   default notional-cap implications, administrative-exit behavior, and dashboard
   interpretation.
 
+## Independent second-pass review and verification
+
+After TV-002 through TV-004 and their regression tests were applied, the entire
+Pine source and all three documentation files were read again rather than
+reviewing only the diff. The second pass retraced initialization, risk-day
+transitions, signal retention, quantity caps, pending/filled/closed order state, every
+administrative exit, dashboard cleanup, and the documented setup and operating
+workflow. It found no additional high-confidence defect that can safely be
+corrected without TradingView runtime evidence.
+
+Local verification consists of `python -m unittest discover -s tests -v`,
+Python bytecode compilation of the test module, whitespace/error-marker checks,
+and a repository-wide scan for unfinished work, obvious credential labels,
+dynamic execution, future-data requests, and immediate market-close behavior.
+The Pine compile and broker-emulator scenarios remain mandatory external checks,
+not local passes; the repository intentionally has no Pine toolchain, dependency
+manifest, CI pipeline, deployment target, database, network service, credentials,
+or environment configuration.
+
 ## Residual risks and platform limits
 
-- Daily-loss and drawdown decisions occur at confirmed chart-bar closes. Gaps,
-  limit moves, latency, and emulator assumptions can exceed modeled risk.
-- A market order placed on the last eligible bar can fill outside the entry
-  session or backtest date range.
-- Session exit detection requires a chart bar whose opening time lies in the
-  configured window. Use a sufficiently small timeframe and schedule the window
-  before the required flat time.
-- Canceling protective orders and requesting an administrative market close does
-  not guarantee its price or make the interval before its fill risk-free.
+- Daily-loss and drawdown decisions occur at confirmed chart-bar closes. Same-
+  close processing reduces the response interval but gaps, limit moves, alert
+  latency, and emulator assumptions can still exceed modeled risk.
+- Same-close processing prevents emulator entry fills from drifting past the
+  approved signal-bar session or backtest boundary. A live alert consumer must
+  independently reject stale or out-of-window messages.
+- The cutoff fallback catches the first available confirmed bar that spans or
+  follows the configured local cutoff when no bar intersects the narrow exit
+  window. A market closure still delays evaluation until another chart bar exists.
+- Administrative close requests are immediate on the confirmed closing tick and
+  do not first cancel active protective brackets. Neither mechanism guarantees an
+  attainable live price.
 - The drawdown peak includes open P&L and is stricter than a closed-equity-only
   calculation, but is still sampled only when the script evaluates.
-- Market orders, brackets, `strategy.cancel_all`, and `strategy.close_all` are
-  broker-emulator abstractions. The script defines no `alertcondition`, webhook,
-  broker API, partial-fill handling, or order-reconciliation layer.
+- Entry and administrative-exit alert conditions and order `alert_message` values
+  are available for TradingView alerts. The script still has no webhook receiver,
+  broker API, partial-fill handling, authentication, or reconciliation service.
 - Test point value, tick size, commission, timezone, session boundaries, and
   continuous-contract roll behavior for every futures symbol.
 - TradingView's Pine editor/compiler and broker emulator are authoritative for
