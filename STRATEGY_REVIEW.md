@@ -32,6 +32,9 @@ review found and resolved the following discrepancy:
 | TV-002 | `futures_v7_4.pine` — non-latching daily-loss liquidation | The entry gate followed the current threshold when the rest-of-day lock was disabled, but forced liquidation followed the internal historical latch. After P&L recovered, a permitted new position was therefore closed on its next confirmed bar even though the daily limit was no longer breached. Liquidation now uses the same effective lock as entry eligibility. | Medium |
 | TV-003 | `futures_v7_4.pine` — boundary and administrative-order lifecycle | Next-tick entries could fill after an approved session/date boundary, narrow exit windows could be missed by bar alignment, and administrative exits canceled protective brackets before their market close could fill. Entries now process on the confirmed signal close, session exits detect a bar spanning or following the cutoff, and administrative closes are immediate while existing brackets remain active. | High |
 | TV-004 | `futures_v7_4.pine` — external event visibility | The strategy exposed no explicit machine-readable event names for an alert consumer. Entry and administrative events now emit stable `alert()` payloads, and order-generating calls provide stable `alert_message` values. Authentication, idempotency, broker reconciliation, and partial-fill management remain responsibilities of an external service. | Medium |
+| TV-005 | `futures_v7_4.pine` — protective order-fill messages | Stop-loss and profit-target fills had no explicit payload, so an order-fill alert could not reliably identify the direction and protective outcome. Every bracket submission and refresh now supplies direction-specific `alert_loss` and `alert_profit` values. | Medium |
+| TV-006 | `futures_v7_4.pine` — coincident administrative exits | Daily-loss, maximum-drawdown, and session controls could all submit `strategy.close_all` on the same evaluation. The strategy now selects one deterministic close reason: maximum drawdown, then daily loss, then session. Session state and flat-order cancellation are still processed when another reason has priority. | Medium |
+| TV-007 | `futures_v7_4.pine` — ambiguous administrative `alert()` payload | All administrative conditions emitted the same `ADMINISTRATIVE_EXIT` event, forcing a consumer to infer the actual policy trigger. The alert now reports `MAXIMUM_DRAWDOWN_EXIT`, `DAILY_LOSS_EXIT`, or `SESSION_EXIT`, using the same priority as the close request. | Low |
 
 #### TV-001 resolution
 
@@ -48,9 +51,19 @@ if pendingEntryCancelledAtSessionExit
     plannedDirection := 0
 ```
 
-No other source/documentation discrepancy was identified by this static review.
-Platform compilation and broker-emulator behavior remain external validation
-requirements, as described under residual risks.
+The later full-path alert and administrative-order review identified TV-005
+through TV-007 below. Platform compilation and broker-emulator behavior remain
+external validation requirements, as described under residual risks.
+
+#### TV-005 through TV-007 resolution
+
+The review traced each order-generating path independently. Protective fills now
+identify `LONG_STOP_EXIT`, `LONG_TARGET_EXIT`, `SHORT_STOP_EXIT`, or
+`SHORT_TARGET_EXIT`. Administrative controls are reduced to one prioritized
+reason before any close request or `alert()` event is emitted, preventing
+duplicate close requests and keeping the two alert mechanisms semantically
+aligned. The session guard still marks the session processed and can cancel a
+flat pending entry even when no session close request is needed.
 
 ### 1. Input safety
 
@@ -152,6 +165,9 @@ the full evaluation sample.
   request while leaving protective brackets active
   until processing. A flat pending session order is canceled when configured.
   These remain emulator actions, not broker-side intrabar controls.
+- If several administrative controls trigger together, one close request is
+  submitted using drawdown, daily loss, then session priority. The session guard
+  still performs its state transition and configured flat-order cancellation.
 - Peak equity and drawdown are sampled on chart evaluations and include open P&L.
   Once reached, the drawdown lock never resets during the run, even if forced
   liquidation is disabled.
@@ -217,8 +233,8 @@ or environment configuration.
   attainable live price.
 - The drawdown peak includes open P&L and is stricter than a closed-equity-only
   calculation, but is still sampled only when the script evaluates.
-- Entry and administrative-exit alert conditions and order `alert_message` values
-  are available for TradingView alerts. The script still has no webhook receiver,
+- Entry, protective-exit, and reason-specific administrative alert payloads are
+  available for TradingView alerts. The script still has no webhook receiver,
   broker API, partial-fill handling, authentication, or reconciliation service.
 - Test point value, tick size, commission, timezone, session boundaries, and
   continuous-contract roll behavior for every futures symbol.

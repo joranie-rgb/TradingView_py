@@ -70,13 +70,23 @@ class StrategyContractTests(unittest.TestCase):
         )
 
     def test_administrative_closes_are_immediate_and_do_not_cancel_brackets(self) -> None:
-        section = SOURCE[SOURCE.index("if dailyLossExitRequired") : SOURCE.index("bool entryWindowOpen")]
+        section = SOURCE[
+            SOURCE.index("int administrativeExitReason") : SOURCE.index(
+                "bool entryWindowOpen"
+            )
+        ]
         self.assertEqual(section.count("immediately = true"), 3)
         self.assertNotRegex(section, r"if (?:dailyLoss|maximumDrawdown)ExitRequired\n\s+strategy\.cancel_all")
 
     def test_strategy_exposes_alert_events(self) -> None:
-        self.assertEqual(SOURCE.count("alert.freq_once_per_bar_close"), 3)
-        for event in ("LONG_ENTRY", "SHORT_ENTRY", "ADMINISTRATIVE_EXIT"):
+        self.assertEqual(SOURCE.count("alert.freq_once_per_bar_close"), 5)
+        for event in (
+            "LONG_ENTRY",
+            "SHORT_ENTRY",
+            "DAILY_LOSS_EXIT",
+            "MAXIMUM_DRAWDOWN_EXIT",
+            "SESSION_EXIT",
+        ):
             self.assertIn(f'alert("{event}"', SOURCE)
         for fill_event in (
             "LONG_ENTRY",
@@ -86,6 +96,26 @@ class StrategyContractTests(unittest.TestCase):
             "SESSION_EXIT",
         ):
             self.assertIn(f'alert_message = "{fill_event}"', SOURCE)
+
+    def test_protective_fills_expose_direction_and_outcome(self) -> None:
+        exits = re.findall(r'strategy\.exit\("(?:Long|Short) Exit"[^\n]+', SOURCE)
+        self.assertGreaterEqual(len(exits), 4)
+        for direction in ("LONG", "SHORT"):
+            direction_exits = [call for call in exits if f'"{direction.title()} Exit"' in call]
+            self.assertGreaterEqual(len(direction_exits), 2)
+            for exit_call in direction_exits:
+                self.assertIn(f'alert_profit = "{direction}_TARGET_EXIT"', exit_call)
+                self.assertIn(f'alert_loss = "{direction}_STOP_EXIT"', exit_call)
+
+    def test_coincident_administrative_exits_submit_one_close(self) -> None:
+        self.assertIn(
+            "int administrativeExitReason = maximumDrawdownExitRequired ? 1 : "
+            "dailyLossExitRequired ? 2 : sessionExitRequired ? 3 : 0",
+            SOURCE,
+        )
+        self.assertNotIn("if dailyLossExitRequired\n", SOURCE)
+        self.assertNotIn("if maximumDrawdownExitRequired\n", SOURCE)
+        self.assertIn("strategy.position_size != 0 and administrativeExitReason == 3", SOURCE)
 
 
 if __name__ == "__main__":

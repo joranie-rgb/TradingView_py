@@ -258,6 +258,11 @@ affect sizing without widening the bracket.
   open position once the drawdown lock is triggered. Turning it off leaves an
   existing position to other exit logic but does not restore new entries.
 
+If maximum drawdown, daily loss, and the session policy require an exit on the
+same bar, the script submits only one close request. Priority is maximum
+drawdown, then daily loss, then session. Session processing and configured
+flat-order cancellation still occur even when another close reason has priority.
+
 The calendar risk day changes at midnight in the configured timezone, but reset
 code runs on the first available chart bar in that new day. If the market is
 closed at midnight, the baseline is captured on that first bar. A threshold can
@@ -351,12 +356,15 @@ stop/target ticks clear after the strategy observes the position close.
 10. **Reconcile alerts and broker behavior.** Strategy fills are emulator events;
     independently verify any external alert-to-order integration. Create a
     TradingView strategy alert that includes order-fill events and/or `alert()`
-    calls as required. Order fill messages are `LONG_ENTRY`, `SHORT_ENTRY`,
-    `DAILY_LOSS_EXIT`, `MAXIMUM_DRAWDOWN_EXIT`, and `SESSION_EXIT`; generic
-    administrative `alert()` calls emit `ADMINISTRATIVE_EXIT`. Treat all alert
-    payloads as untrusted, authenticate the receiver, reject duplicates/stale
-    timestamps, enforce session and quantity limits again, and reconcile broker
-    acknowledgements and fills outside this script.
+    calls as required. Treat all alert payloads as untrusted, authenticate the
+    receiver, reject duplicates/stale timestamps, enforce session and quantity
+    limits again, and reconcile broker acknowledgements and fills outside this
+    script. Entry messages are `LONG_ENTRY` and `SHORT_ENTRY`; protective fills
+    are `LONG_STOP_EXIT`, `LONG_TARGET_EXIT`, `SHORT_STOP_EXIT`, and
+    `SHORT_TARGET_EXIT`;
+    administrative fills and `alert()` events identify `DAILY_LOSS_EXIT`,
+    `MAXIMUM_DRAWDOWN_EXIT`, or `SESSION_EXIT`. When controls coincide, only the
+    prioritized administrative reason is emitted.
 
 ## 7. Troubleshooting
 
