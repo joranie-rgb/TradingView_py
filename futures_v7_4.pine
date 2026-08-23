@@ -261,19 +261,24 @@ bool dailyLossExitRequired = dailyLossEntryLock and closePositionAtDailyLoss and
 bool maximumDrawdownExitRequired = maximumDrawdownLocked and closePositionAtMaximumDrawdown and strategy.position_size != 0 and barstate.isconfirmed
 bool sessionExitTrigger = insideSessionExitWindow or useSessionExitCutoffFallback and barReachesSessionExitCutoff
 bool sessionExitRequired = useSessionExit and sessionExitTrigger and not sessionExitProcessed and barstate.isconfirmed
-bool administrativeExitRequested = dailyLossExitRequired or maximumDrawdownExitRequired or sessionExitRequired
+// Select one deterministic reason when controls coincide. Drawdown has the
+// broadest scope, followed by the daily risk limit and then the session policy.
+// This avoids submitting multiple close-all requests for the same position.
+int administrativeExitReason = maximumDrawdownExitRequired ? 1 : dailyLossExitRequired ? 2 : sessionExitRequired ? 3 : 0
+bool administrativeExitRequested = administrativeExitReason != 0
 // A flat strategy can still have an unfilled order. Remember when the session
 // guard cancels it so its frozen plan can be cleared below.
 bool pendingEntryCancelledAtSessionExit = sessionExitRequired and cancelOrdersAtSessionExit and strategy.position_size == 0
-if dailyLossExitRequired
+if administrativeExitReason == 1
+    // Keep protective brackets working until the immediate close is processed.
+    strategy.close_all(comment = "Maximum Drawdown Exit", immediately = true, alert_message = "MAXIMUM_DRAWDOWN_EXIT")
+if administrativeExitReason == 2
     // Keep protective brackets working until the immediate close is processed.
     strategy.close_all(comment = "Daily Loss Exit", immediately = true, alert_message = "DAILY_LOSS_EXIT")
-if maximumDrawdownExitRequired
-    strategy.close_all(comment = "Maximum Drawdown Exit", immediately = true, alert_message = "MAXIMUM_DRAWDOWN_EXIT")
 if sessionExitRequired
     if cancelOrdersAtSessionExit and strategy.position_size == 0
         strategy.cancel_all()
-    if strategy.position_size != 0
+    if strategy.position_size != 0 and administrativeExitReason == 3
         strategy.close_all(comment = "Session Exit", immediately = true, alert_message = "SESSION_EXIT")
     sessionExitProcessed := true
 
@@ -299,14 +304,14 @@ if enterLong and not enterShort
     strategy.entry("Long", strategy.long, qty = calculatedContracts, comment = "Long Entry", alert_message = "LONG_ENTRY")
     // loss/profit are tick distances from the actual fill, avoiding the V7.2
     // signal-close anchoring bug when slippage changes the modeled fill.
-    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop")
+    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop", alert_profit = "LONG_TARGET_EXIT", alert_loss = "LONG_STOP_EXIT")
 
 if enterShort and not enterLong
     plannedStopTicks := stopTicks
     plannedTargetTicks := targetTicks
     plannedDirection := -1
     strategy.entry("Short", strategy.short, qty = calculatedContracts, comment = "Short Entry", alert_message = "SHORT_ENTRY")
-    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop")
+    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop", alert_profit = "SHORT_TARGET_EXIT", alert_loss = "SHORT_STOP_EXIT")
 
 if newPositionOpened and plannedDirection == 1
     activeStopPrice := math.round_to_mintick(strategy.position_avg_price - plannedStopTicks * syminfo.mintick)
@@ -316,9 +321,9 @@ if newPositionOpened and plannedDirection == -1
     activeTargetPrice := math.round_to_mintick(strategy.position_avg_price - plannedTargetTicks * syminfo.mintick)
 
 if strategy.position_size > 0 and plannedDirection == 1 and not administrativeExitRequested
-    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop")
+    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop", alert_profit = "LONG_TARGET_EXIT", alert_loss = "LONG_STOP_EXIT")
 if strategy.position_size < 0 and plannedDirection == -1 and not administrativeExitRequested
-    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop")
+    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop", alert_profit = "SHORT_TARGET_EXIT", alert_loss = "SHORT_STOP_EXIT")
 
 if positionJustClosed
     plannedStopTicks := na
@@ -338,8 +343,12 @@ if enterLong and not enterShort
     alert("LONG_ENTRY", alert.freq_once_per_bar_close)
 if enterShort and not enterLong
     alert("SHORT_ENTRY", alert.freq_once_per_bar_close)
-if administrativeExitRequested
-    alert("ADMINISTRATIVE_EXIT", alert.freq_once_per_bar_close)
+if administrativeExitReason == 1
+    alert("MAXIMUM_DRAWDOWN_EXIT", alert.freq_once_per_bar_close)
+if administrativeExitReason == 2
+    alert("DAILY_LOSS_EXIT", alert.freq_once_per_bar_close)
+if administrativeExitReason == 3
+    alert("SESSION_EXIT", alert.freq_once_per_bar_close)
 
 var table dashboard = table.new(position.top_right, 2, 14, border_width = 1)
 if barstate.islast
