@@ -164,6 +164,23 @@ class StrategyContractTests(unittest.TestCase):
         ):
             self.assertIn(label, SOURCE)
 
+    def test_dashboard_preserves_daily_loss_monitoring_without_sizing_cap(self) -> None:
+        self.assertIn('table.cell(dashboard, 0, 3, "Daily P&L")', SOURCE)
+        self.assertIn(
+            'useDailyLossLimit ? str.tostring(monitoredDailyPnl, "#.00") : "DISABLED"',
+            SOURCE,
+        )
+        self.assertIn(
+            'useDailyLossLimit ? str.tostring(remainingDailyLossCapacity, "#.00") : '
+            '"DISABLED"',
+            SOURCE,
+        )
+        self.assertNotIn(
+            "useDailyLossLimit and reserveDailyLossCapacity ? "
+            'str.tostring(remainingDailyLossCapacity, "#.00")',
+            SOURCE,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
