@@ -117,6 +117,53 @@ class StrategyContractTests(unittest.TestCase):
         self.assertNotIn("if maximumDrawdownExitRequired\n", SOURCE)
         self.assertIn("strategy.position_size != 0 and administrativeExitReason == 3", SOURCE)
 
+    def test_workflow_specific_inputs_follow_their_controlling_toggle(self) -> None:
+        dependencies = {
+            "Volume Average Length": "useVolumeFilter",
+            "Signal Validity Bars": "requireNewSetup",
+            "Maximum Notional Exposure (% of Equity)": "useNotionalExposureLimit",
+            "Maximum Filled Trades per Day": "useDailyTradeLimit",
+            "Daily Loss Limit Mode": "useDailyLossLimit",
+            "Entry Session": "useEntrySession",
+            "Session Exit Trigger Window": "useSessionExit",
+            "Backtest Start": "useBacktestDateFilter",
+        }
+        for label, controller in dependencies.items():
+            label_position = SOURCE.index(f'"{label}"')
+            declaration = SOURCE[label_position : label_position + 500]
+            self.assertIn(f"active = {controller}", declaration)
+
+    def test_loss_mode_exposes_only_the_selected_value(self) -> None:
+        self.assertIn(
+            '"Maximum Daily Loss (%)", minval = 0.01, maxval = 100, '
+            'step = 0.05, group = GROUP_DAILY, active = useDailyLossLimit and '
+            'dailyLossMode == "Percent"',
+            SOURCE,
+        )
+        self.assertIn(
+            '"Maximum Daily Loss (Cash)", minval = 1, step = 50, '
+            'group = GROUP_DAILY, active = useDailyLossLimit and dailyLossMode == "Cash"',
+            SOURCE,
+        )
+
+    def test_disabled_direction_cannot_veto_active_workflow(self) -> None:
+        self.assertIn("enableLongEntries and calculationsReady", SOURCE)
+        self.assertIn("(not enableShortEntries or longScore > shortScore)", SOURCE)
+        self.assertIn("enableShortEntries and calculationsReady", SOURCE)
+        self.assertIn("(not enableLongEntries or shortScore > longScore)", SOURCE)
+
+    def test_dashboard_reports_disabled_and_direction_specific_states(self) -> None:
+        for label in (
+            '"Trade workflow"',
+            '"ENTRIES DISABLED"',
+            '"Daily trade limit"',
+            '"Active scores"',
+            '"Active signal age"',
+            '"Daily loss capacity"',
+            '"Drawdown lock"',
+        ):
+            self.assertIn(label, SOURCE)
+
 
 if __name__ == "__main__":
     unittest.main()
