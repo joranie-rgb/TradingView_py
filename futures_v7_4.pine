@@ -42,10 +42,10 @@ int emaSlopeLookback = input.int(3, "EMA Slope Lookback", minval = 1, maxval = 5
 float minimumEmaSeparationAtr = input.float(0.10, "Minimum EMA Separation in ATR", minval = 0, step = 0.05, group = GROUP_TREND)
 
 int rsiLength = input.int(14, "RSI Length", minval = 2, group = GROUP_MOMENTUM)
-float rsiLongMinimum = input.float(52, "Minimum RSI for Long", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM)
-float rsiLongMaximum = input.float(80, "Maximum RSI for Long", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM)
-float rsiShortMinimum = input.float(20, "Minimum RSI for Short", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM)
-float rsiShortMaximum = input.float(48, "Maximum RSI for Short", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM)
+float rsiLongMinimum = input.float(52, "Minimum RSI for Long", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM, active = enableLongEntries)
+float rsiLongMaximum = input.float(80, "Maximum RSI for Long", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM, active = enableLongEntries)
+float rsiShortMinimum = input.float(20, "Minimum RSI for Short", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM, active = enableShortEntries)
+float rsiShortMaximum = input.float(48, "Maximum RSI for Short", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM, active = enableShortEntries)
 int macdFastLength = input.int(12, "MACD Fast Length", minval = 1, group = GROUP_MOMENTUM)
 int macdSlowLength = input.int(26, "MACD Slow Length", minval = 2, group = GROUP_MOMENTUM)
 int macdSignalLength = input.int(9, "MACD Signal Length", minval = 1, group = GROUP_MOMENTUM)
@@ -53,13 +53,13 @@ int macdSignalLength = input.int(9, "MACD Signal Length", minval = 1, group = GR
 int atrLength = input.int(14, "ATR Length", minval = 1, group = GROUP_FILTERS)
 float minimumAtrPercent = input.float(0.05, "Minimum ATR as Percent of Price", minval = 0, step = 0.01, group = GROUP_FILTERS)
 bool useVolumeFilter = input.bool(false, "Use Relative Volume Filter", group = GROUP_FILTERS)
-int volumeAverageLength = input.int(20, "Volume Average Length", minval = 1, group = GROUP_FILTERS)
-float minimumRelativeVolume = input.float(1, "Minimum Relative Volume", minval = 0, step = 0.1, group = GROUP_FILTERS)
+int volumeAverageLength = input.int(20, "Volume Average Length", minval = 1, group = GROUP_FILTERS, active = useVolumeFilter)
+float minimumRelativeVolume = input.float(1, "Minimum Relative Volume", minval = 0, step = 0.1, group = GROUP_FILTERS, active = useVolumeFilter)
 
 int minimumSignalScore = input.int(7, "Minimum Signal Score", minval = 1, maxval = 12, group = GROUP_SIGNAL)
 bool requireNewSetup = input.bool(true, "Require New Setup Transition", group = GROUP_SIGNAL)
 int signalValidityBars = input.int(3, "Signal Validity Bars", minval = 0, maxval = 100, group = GROUP_SIGNAL,
-     tooltip = "Keeps a fresh technical setup eligible while independent session, volatility, volume, cooldown, or risk gates temporarily block entry. Zero means the event bar only.")
+     tooltip = "Keeps a fresh technical setup eligible while independent session, volatility, volume, cooldown, or risk gates temporarily block entry. Zero means the event bar only.", active = requireNewSetup)
 int cooldownBars = input.int(5, "Cooldown Bars After Position Closes", minval = 0, maxval = 500, group = GROUP_SIGNAL)
 
 float accountRiskPercent = input.float(0.5, "Account Risk per Trade (%)", minval = 0.01, maxval = 10, step = 0.05, group = GROUP_RISK)
@@ -72,41 +72,41 @@ float sizingBufferTicks = input.float(2, "Entry/Slippage Risk Buffer in Ticks", 
 float roundTripCommission = input.float(5, "Estimated Round-Trip Commission per Contract", minval = 5, step = 0.01, group = GROUP_RISK,
      tooltip = "Keep this synchronized with twice the strategy commission_value. It is included in sizing, not charged a second time.")
 bool useNotionalExposureLimit = input.bool(true, "Limit Notional Exposure", group = GROUP_RISK)
-float maximumNotionalExposurePercent = input.float(100, "Maximum Notional Exposure (% of Equity)", minval = 1, maxval = 1000, step = 5, group = GROUP_RISK)
+float maximumNotionalExposurePercent = input.float(100, "Maximum Notional Exposure (% of Equity)", minval = 1, maxval = 1000, step = 5, group = GROUP_RISK, active = useNotionalExposureLimit)
+bool useDailyLossLimit = input.bool(true, "Enable Daily Loss Limit", group = GROUP_DAILY)
 bool reserveDailyLossCapacity = input.bool(true, "Cap New Trade Risk at Remaining Daily Loss Capacity", group = GROUP_RISK,
-     tooltip = "Prevents a planned trade from risking more than the unused daily-loss allowance. Gaps can still exceed modeled risk.")
+     tooltip = "Prevents a planned trade from risking more than the unused daily-loss allowance. Gaps can still exceed modeled risk.", active = useDailyLossLimit)
 
 bool useDailyTradeLimit = input.bool(true, "Enable Daily Trade Limit", group = GROUP_DAILY)
-int maximumTradesPerDay = input.int(3, "Maximum Filled Trades per Day", minval = 1, group = GROUP_DAILY)
-bool useDailyLossLimit = input.bool(true, "Enable Daily Loss Limit", group = GROUP_DAILY)
-string dailyLossMode = input.string("Percent", "Daily Loss Limit Mode", options = ["Percent", "Cash"], group = GROUP_DAILY)
-float dailyLossPercent = input.float(1.5, "Maximum Daily Loss (%)", minval = 0.01, maxval = 100, step = 0.05, group = GROUP_DAILY)
-float dailyLossCash = input.float(1500, "Maximum Daily Loss (Cash)", minval = 1, step = 50, group = GROUP_DAILY)
-bool includeOpenPnlInDailyLimit = input.bool(true, "Include Open P&L in Daily Loss", group = GROUP_DAILY)
-bool closePositionAtDailyLoss = input.bool(true, "Close Position at Daily Loss Limit", group = GROUP_DAILY)
-bool lockTradingAfterDailyLoss = input.bool(true, "Lock Trading for Rest of Risk Day", group = GROUP_DAILY)
+int maximumTradesPerDay = input.int(3, "Maximum Filled Trades per Day", minval = 1, group = GROUP_DAILY, active = useDailyTradeLimit)
+string dailyLossMode = input.string("Percent", "Daily Loss Limit Mode", options = ["Percent", "Cash"], group = GROUP_DAILY, active = useDailyLossLimit)
+float dailyLossPercent = input.float(1.5, "Maximum Daily Loss (%)", minval = 0.01, maxval = 100, step = 0.05, group = GROUP_DAILY, active = useDailyLossLimit and dailyLossMode == "Percent")
+float dailyLossCash = input.float(1500, "Maximum Daily Loss (Cash)", minval = 1, step = 50, group = GROUP_DAILY, active = useDailyLossLimit and dailyLossMode == "Cash")
+bool includeOpenPnlInDailyLimit = input.bool(true, "Include Open P&L in Daily Loss", group = GROUP_DAILY, active = useDailyLossLimit)
+bool closePositionAtDailyLoss = input.bool(true, "Close Position at Daily Loss Limit", group = GROUP_DAILY, active = useDailyLossLimit)
+bool lockTradingAfterDailyLoss = input.bool(true, "Lock Trading for Rest of Risk Day", group = GROUP_DAILY, active = useDailyLossLimit)
 bool useMaximumDrawdownLimit = input.bool(true, "Enable Strategy Drawdown Lock", group = GROUP_DAILY)
-float maximumDrawdownPercent = input.float(10, "Maximum Drawdown from Peak Equity (%)", minval = 0.1, maxval = 100, step = 0.1, group = GROUP_DAILY)
-bool closePositionAtMaximumDrawdown = input.bool(true, "Close Position at Drawdown Limit", group = GROUP_DAILY)
+float maximumDrawdownPercent = input.float(10, "Maximum Drawdown from Peak Equity (%)", minval = 0.1, maxval = 100, step = 0.1, group = GROUP_DAILY, active = useMaximumDrawdownLimit)
+bool closePositionAtMaximumDrawdown = input.bool(true, "Close Position at Drawdown Limit", group = GROUP_DAILY, active = useMaximumDrawdownLimit)
 
 string sessionTimezone = input.string("America/New_York", "Session and Daily Reset Timezone", group = GROUP_SESSION)
 bool useEntrySession = input.bool(true, "Restrict Entries to Session", group = GROUP_SESSION)
-string entrySession = input.session("0930-1545", "Entry Session", group = GROUP_SESSION)
+string entrySession = input.session("0930-1545", "Entry Session", group = GROUP_SESSION, active = useEntrySession)
 bool useSessionExit = input.bool(true, "Enable Forced Session Exit", group = GROUP_SESSION)
-string sessionExitWindow = input.session("1550-1555", "Session Exit Trigger Window", group = GROUP_SESSION)
+string sessionExitWindow = input.session("1550-1555", "Session Exit Trigger Window", group = GROUP_SESSION, active = useSessionExit)
 bool useSessionExitCutoffFallback = input.bool(true, "Use Session Exit Cutoff Fallback", group = GROUP_SESSION,
-     tooltip = "Also exits on the first confirmed bar at or after the cutoff. This prevents a narrow trigger window from being missed by chart-bar alignment.")
-int sessionExitCutoffHour = input.int(15, "Session Exit Cutoff Hour", minval = 0, maxval = 23, group = GROUP_SESSION)
-int sessionExitCutoffMinute = input.int(50, "Session Exit Cutoff Minute", minval = 0, maxval = 59, group = GROUP_SESSION)
-bool cancelOrdersAtSessionExit = input.bool(true, "Cancel Pending Orders at Session Exit", group = GROUP_SESSION)
+     tooltip = "Also exits on the first confirmed bar at or after the cutoff. This prevents a narrow trigger window from being missed by chart-bar alignment.", active = useSessionExit)
+int sessionExitCutoffHour = input.int(15, "Session Exit Cutoff Hour", minval = 0, maxval = 23, group = GROUP_SESSION, active = useSessionExit and useSessionExitCutoffFallback)
+int sessionExitCutoffMinute = input.int(50, "Session Exit Cutoff Minute", minval = 0, maxval = 59, group = GROUP_SESSION, active = useSessionExit and useSessionExitCutoffFallback)
+bool cancelOrdersAtSessionExit = input.bool(true, "Cancel Pending Orders at Session Exit", group = GROUP_SESSION, active = useSessionExit)
 
 bool blockNonStandardCharts = input.bool(true, "Block Nonstandard Chart Types", group = GROUP_BACKTEST)
 bool requireIntradayChart = input.bool(true, "Require Intraday Chart", group = GROUP_BACKTEST,
      tooltip = "Session controls are not reliable on daily or higher chart bars.")
 int maximumChartTimeframeMinutes = input.int(60, "Maximum Chart Timeframe (Minutes)", minval = 1, maxval = 1440, group = GROUP_BACKTEST)
 bool useBacktestDateFilter = input.bool(false, "Use Backtest Date Range", group = GROUP_BACKTEST)
-int backtestStartTime = input.time(timestamp("01 Jan 2020 00:00 +0000"), "Backtest Start", group = GROUP_BACKTEST)
-int backtestEndTime = input.time(timestamp("31 Dec 2099 23:59 +0000"), "Backtest End", group = GROUP_BACKTEST)
+int backtestStartTime = input.time(timestamp("01 Jan 2020 00:00 +0000"), "Backtest Start", group = GROUP_BACKTEST, active = useBacktestDateFilter)
+int backtestEndTime = input.time(timestamp("31 Dec 2099 23:59 +0000"), "Backtest End", group = GROUP_BACKTEST, active = useBacktestDateFilter)
 
 bool showSignalMarkers = input.bool(true, "Show Signal Markers", group = GROUP_DISPLAY)
 bool showRiskLevels = input.bool(true, "Show Active Stop and Target", group = GROUP_DISPLAY)
@@ -118,9 +118,9 @@ if barstate.isfirst and emaFastLength >= emaSlowLength
     runtime.error("Fast EMA Length must be less than Slow EMA Length.")
 if barstate.isfirst and macdFastLength >= macdSlowLength
     runtime.error("MACD Fast Length must be less than MACD Slow Length.")
-if barstate.isfirst and rsiLongMinimum >= rsiLongMaximum
+if barstate.isfirst and enableLongEntries and rsiLongMinimum >= rsiLongMaximum
     runtime.error("Minimum RSI for Long must be below its maximum.")
-if barstate.isfirst and rsiShortMinimum >= rsiShortMaximum
+if barstate.isfirst and enableShortEntries and rsiShortMinimum >= rsiShortMaximum
     runtime.error("Minimum RSI for Short must be below its maximum.")
 if barstate.isfirst and minimumContracts > maximumContracts
     runtime.error("Minimum Contracts cannot exceed Maximum Contracts.")
@@ -181,8 +181,8 @@ int shortScore = (bearishAlignment ? 2 : 0) + (freshBearCross ? 2 : 0) + (fastEm
 // Technical intent is deliberately independent from execution filters and risk
 // locks. In V7.3, including marketQualified in the transition could consume or
 // manufacture a "new" signal merely because volume/session eligibility changed.
-bool longTechnicalSetup = calculationsReady and longScore >= minimumSignalScore and longScore > shortScore and bullishAlignment and fastEmaRising and rsiSupportsLong
-bool shortTechnicalSetup = calculationsReady and shortScore >= minimumSignalScore and shortScore > longScore and bearishAlignment and fastEmaFalling and rsiSupportsShort
+bool longTechnicalSetup = enableLongEntries and calculationsReady and longScore >= minimumSignalScore and (not enableShortEntries or longScore > shortScore) and bullishAlignment and fastEmaRising and rsiSupportsLong
+bool shortTechnicalSetup = enableShortEntries and calculationsReady and shortScore >= minimumSignalScore and (not enableLongEntries or shortScore > longScore) and bearishAlignment and fastEmaFalling and rsiSupportsShort
 bool longSetupEvent = requireNewSetup ? longTechnicalSetup and not longTechnicalSetup[1] : longTechnicalSetup
 bool shortSetupEvent = requireNewSetup ? shortTechnicalSetup and not shortTechnicalSetup[1] : shortTechnicalSetup
 int barsSinceLongSetup = ta.barssince(longSetupEvent)
@@ -350,36 +350,38 @@ if administrativeExitReason == 2
 if administrativeExitReason == 3
     alert("SESSION_EXIT", alert.freq_once_per_bar_close)
 
-var table dashboard = table.new(position.top_right, 2, 14, border_width = 1)
+var table dashboard = table.new(position.top_right, 2, 15, border_width = 1)
 if barstate.islast
     if showDashboard
         table.cell(dashboard, 0, 0, "Metric", bgcolor = color.gray, text_color = color.white)
         table.cell(dashboard, 1, 0, "Value", bgcolor = color.gray, text_color = color.white)
         table.cell(dashboard, 0, 1, "Position")
         table.cell(dashboard, 1, 1, strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT")
-        table.cell(dashboard, 0, 2, "Trades today")
-        table.cell(dashboard, 1, 2, str.tostring(tradesToday) + " / " + str.tostring(maximumTradesPerDay))
+        table.cell(dashboard, 0, 2, "Trade workflow")
+        table.cell(dashboard, 1, 2, enableLongEntries and enableShortEntries ? "LONG + SHORT" : enableLongEntries ? "LONG ONLY" : enableShortEntries ? "SHORT ONLY" : "ENTRIES DISABLED")
         table.cell(dashboard, 0, 3, "Daily P&L")
-        table.cell(dashboard, 1, 3, str.tostring(monitoredDailyPnl, "#.00"))
-        table.cell(dashboard, 0, 4, "Risk budget")
-        table.cell(dashboard, 1, 4, str.tostring(effectiveRiskBudget, "#.00"))
-        table.cell(dashboard, 0, 5, "Risk/contract")
-        table.cell(dashboard, 1, 5, str.tostring(riskPerContract, "#.00"))
-        table.cell(dashboard, 0, 6, "Quantity")
-        table.cell(dashboard, 1, 6, str.tostring(calculatedContracts))
-        table.cell(dashboard, 0, 7, "Scores L / S")
-        table.cell(dashboard, 1, 7, str.tostring(longScore) + " / " + str.tostring(shortScore))
-        table.cell(dashboard, 0, 8, "Stop / target ticks")
-        table.cell(dashboard, 1, 8, str.tostring(plannedStopTicks) + " / " + str.tostring(plannedTargetTicks))
-        table.cell(dashboard, 0, 9, "Signal age L / S")
-        table.cell(dashboard, 1, 9, str.tostring(barsSinceLongSetup) + " / " + str.tostring(barsSinceShortSetup))
-        table.cell(dashboard, 0, 10, "Daily capacity")
-        table.cell(dashboard, 1, 10, str.tostring(remainingDailyLossCapacity, "#.00"))
-        table.cell(dashboard, 0, 11, "Notional quantity cap")
-        table.cell(dashboard, 1, 11, str.tostring(notionalBasedContracts))
-        table.cell(dashboard, 0, 12, "Drawdown / lock")
-        table.cell(dashboard, 1, 12, str.tostring(strategyDrawdownPercent, "#.00") + "% / " + (maximumDrawdownLocked ? "LOCKED" : "OPEN"), text_color = maximumDrawdownLocked ? color.red : color.green)
-        table.cell(dashboard, 0, 13, "Tick / point / tick value")
-        table.cell(dashboard, 1, 13, str.tostring(syminfo.mintick) + " / " + str.tostring(syminfo.pointvalue) + " / " + str.tostring(syminfo.mintick * syminfo.pointvalue, "#.########"))
+        table.cell(dashboard, 1, 3, useDailyLossLimit ? str.tostring(monitoredDailyPnl, "#.00") : "DISABLED")
+        table.cell(dashboard, 0, 4, "Daily trade limit")
+        table.cell(dashboard, 1, 4, useDailyTradeLimit ? str.tostring(tradesToday) + " / " + str.tostring(maximumTradesPerDay) : "DISABLED")
+        table.cell(dashboard, 0, 5, "Risk budget")
+        table.cell(dashboard, 1, 5, str.tostring(effectiveRiskBudget, "#.00"))
+        table.cell(dashboard, 0, 6, "Risk/contract")
+        table.cell(dashboard, 1, 6, str.tostring(riskPerContract, "#.00"))
+        table.cell(dashboard, 0, 7, "Quantity")
+        table.cell(dashboard, 1, 7, str.tostring(calculatedContracts))
+        table.cell(dashboard, 0, 8, "Active scores")
+        table.cell(dashboard, 1, 8, enableLongEntries and enableShortEntries ? "L " + str.tostring(longScore) + " / S " + str.tostring(shortScore) : enableLongEntries ? "L " + str.tostring(longScore) : enableShortEntries ? "S " + str.tostring(shortScore) : "NONE")
+        table.cell(dashboard, 0, 9, "Stop / target ticks")
+        table.cell(dashboard, 1, 9, str.tostring(plannedStopTicks) + " / " + str.tostring(plannedTargetTicks))
+        table.cell(dashboard, 0, 10, "Active signal age")
+        table.cell(dashboard, 1, 10, enableLongEntries and enableShortEntries ? "L " + str.tostring(barsSinceLongSetup) + " / S " + str.tostring(barsSinceShortSetup) : enableLongEntries ? "L " + str.tostring(barsSinceLongSetup) : enableShortEntries ? "S " + str.tostring(barsSinceShortSetup) : "NONE")
+        table.cell(dashboard, 0, 11, "Daily loss capacity")
+        table.cell(dashboard, 1, 11, useDailyLossLimit ? str.tostring(remainingDailyLossCapacity, "#.00") : "DISABLED")
+        table.cell(dashboard, 0, 12, "Notional quantity cap")
+        table.cell(dashboard, 1, 12, useNotionalExposureLimit ? str.tostring(notionalBasedContracts) : "DISABLED")
+        table.cell(dashboard, 0, 13, "Drawdown lock")
+        table.cell(dashboard, 1, 13, useMaximumDrawdownLimit ? str.tostring(strategyDrawdownPercent, "#.00") + "% / " + (maximumDrawdownLocked ? "LOCKED" : "OPEN") : "DISABLED", text_color = useMaximumDrawdownLimit and maximumDrawdownLocked ? color.red : useMaximumDrawdownLimit ? color.green : color.gray)
+        table.cell(dashboard, 0, 14, "Tick / point / tick value")
+        table.cell(dashboard, 1, 14, str.tostring(syminfo.mintick) + " / " + str.tostring(syminfo.pointvalue) + " / " + str.tostring(syminfo.mintick * syminfo.pointvalue, "#.########"))
     else
-        table.clear(dashboard, 0, 0, 1, 13)
+        table.clear(dashboard, 0, 0, 1, 14)

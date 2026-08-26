@@ -118,8 +118,16 @@ this fallback bar is still early enough for the intended operating policy.
 - **Enable Short Entries** permits bearish orders.
 
 Disable one side when testing a long-only or short-only mandate. Disabling a side
-does not change how its score is calculated; the opposing score can still stop a
-weaker setup from qualifying.
+also disables its RSI inputs, setup state, signal age, and dashboard values. In a
+single-direction workflow, the disabled direction's diagnostic score cannot veto
+an otherwise valid setup. With both directions disabled, the dashboard reports
+**ENTRIES DISABLED** and no setup can become active.
+
+TradingView preserves the saved value of an inactive input so it is restored if
+its controlling workflow is re-enabled. Inapplicable dependent inputs are shown
+disabled in the Inputs dialog rather than appearing actionable. This applies to
+directional RSI bands, relative-volume settings, signal validity, notional and
+daily-risk caps, daily-loss mode values, session controls, and backtest dates.
 
 ### 2. Trend
 
@@ -166,8 +174,8 @@ blocked rather than treating missing data as acceptable.
   bars to have elapsed since the recorded exit bar.
 
 When **Require New Setup Transition** is disabled, every bar on which the setup
-remains true is an event. Signal age stays zero and **Signal Validity Bars** has
-no practical limiting effect. With transition mode enabled, a validity of `3`
+remains true is an event. Signal age stays zero and **Signal Validity Bars** is
+disabled because it has no practical limiting effect. With transition mode enabled, a validity of `3`
 permits ages 0 through 3 (four chart bars total), while the setup remains true.
 
 Long and short scores award:
@@ -242,8 +250,9 @@ affect sizing without widening the bracket.
   cap is inactive even if its own switch is on.
 - **Daily Loss Limit Mode** selects percentage of starting equity or fixed cash.
 - **Maximum Daily Loss (%)** sets the allowance used in **Percent** mode as a
-  percentage of equity at the start of the risk day.
+  percentage of equity at the start of the risk day; the cash value is disabled.
 - **Maximum Daily Loss (Cash)** sets the fixed allowance used in **Cash** mode.
+  The percentage value is disabled in this mode.
 - **Include Open P&L** chooses marked-to-market equity or realized net profit for
   daily monitoring.
 - **Close Position at Daily Loss Limit** submits an immediate closing-tick market request.
