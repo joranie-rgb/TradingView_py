@@ -1,6 +1,6 @@
-# Code Review of Futures Strategy V7.4
+# Code Review of Futures Strategy V7.5
 
-`futures_v7_4.pine` is the reviewed successor to V7.3. It uses confirmed chart
+`futures_v7_5.pine` is the reviewed successor to V7.3. It uses confirmed chart
 bars, same-close market-order execution, and no higher-timeframe or future-data
 requests.
 For installation, input behavior, formulas, troubleshooting, and a pre-use
@@ -18,7 +18,7 @@ No Pine compiler or TradingView broker emulator is available in this repository.
 Consequently, syntax and platform-specific fill behavior must still be verified
 in TradingView. This is static analysis, not a claim of identical live execution.
 
-## Findings addressed in V7.4
+## Findings addressed in V7.5
 
 ### Verification report
 
@@ -28,13 +28,13 @@ review found and resolved the following discrepancy:
 
 | Issue ID | Location/File | Description of Discrepancy | Severity (High/Medium/Low) |
 | --- | --- | --- | --- |
-| TV-001 | `futures_v7_4.pine` — session-exit cancellation and planned-order state | When a session exit canceled a pending entry while the strategy was still flat, the frozen stop ticks, target ticks, and direction were not cleared because cleanup only handled a filled position closing. The dashboard could therefore show a plan after its order no longer existed, contrary to the documented display semantics. The session cancellation path now records this lifecycle event and clears all pending-plan state before any new submission is evaluated. | Low |
-| TV-002 | `futures_v7_4.pine` — non-latching daily-loss liquidation | The entry gate followed the current threshold when the rest-of-day lock was disabled, but forced liquidation followed the internal historical latch. After P&L recovered, a permitted new position was therefore closed on its next confirmed bar even though the daily limit was no longer breached. Liquidation now uses the same effective lock as entry eligibility. | Medium |
-| TV-003 | `futures_v7_4.pine` — boundary and administrative-order lifecycle | Next-tick entries could fill after an approved session/date boundary, narrow exit windows could be missed by bar alignment, and administrative exits canceled protective brackets before their market close could fill. Entries now process on the confirmed signal close, session exits detect a bar spanning or following the cutoff, and administrative closes are immediate while existing brackets remain active. | High |
-| TV-004 | `futures_v7_4.pine` — external event visibility | The strategy exposed no explicit machine-readable event names for an alert consumer. Entry and administrative events now emit stable `alert()` payloads, and order-generating calls provide stable `alert_message` values. Authentication, idempotency, broker reconciliation, and partial-fill management remain responsibilities of an external service. | Medium |
-| TV-005 | `futures_v7_4.pine` — protective order-fill messages | Stop-loss and profit-target fills had no explicit payload, so an order-fill alert could not reliably identify the direction and protective outcome. Every bracket submission and refresh now supplies direction-specific `alert_loss` and `alert_profit` values. | Medium |
-| TV-006 | `futures_v7_4.pine` — coincident administrative exits | Daily-loss, maximum-drawdown, and session controls could all submit `strategy.close_all` on the same evaluation. The strategy now selects one deterministic close reason: maximum drawdown, then daily loss, then session. Session state and flat-order cancellation are still processed when another reason has priority. | Medium |
-| TV-007 | `futures_v7_4.pine` — ambiguous administrative `alert()` payload | All administrative conditions emitted the same `ADMINISTRATIVE_EXIT` event, forcing a consumer to infer the actual policy trigger. The alert now reports `MAXIMUM_DRAWDOWN_EXIT`, `DAILY_LOSS_EXIT`, or `SESSION_EXIT`, using the same priority as the close request. | Low |
+| TV-001 | `futures_v7_5.pine` — session-exit cancellation and planned-order state | When a session exit canceled a pending entry while the strategy was still flat, the frozen stop ticks, target ticks, and direction were not cleared because cleanup only handled a filled position closing. The dashboard could therefore show a plan after its order no longer existed, contrary to the documented display semantics. The session cancellation path now records this lifecycle event and clears all pending-plan state before any new submission is evaluated. | Low |
+| TV-002 | `futures_v7_5.pine` — non-latching daily-loss liquidation | The entry gate followed the current threshold when the rest-of-day lock was disabled, but forced liquidation followed the internal historical latch. After P&L recovered, a permitted new position was therefore closed on its next confirmed bar even though the daily limit was no longer breached. Liquidation now uses the same effective lock as entry eligibility. | Medium |
+| TV-003 | `futures_v7_5.pine` — boundary and administrative-order lifecycle | Next-tick entries could fill after an approved session/date boundary, narrow exit windows could be missed by bar alignment, and administrative exits canceled protective brackets before their market close could fill. Entries now process on the confirmed signal close, session exits detect a bar spanning or following the cutoff, and administrative closes are immediate while existing brackets remain active. | High |
+| TV-004 | `futures_v7_5.pine` — external event visibility | The strategy exposed no explicit machine-readable event names for an alert consumer. Entry and administrative events now emit stable `alert()` payloads, and order-generating calls provide stable `alert_message` values. Authentication, idempotency, broker reconciliation, and partial-fill management remain responsibilities of an external service. | Medium |
+| TV-005 | `futures_v7_5.pine` — protective order-fill messages | Stop-loss and profit-target fills had no explicit payload, so an order-fill alert could not reliably identify the direction and protective outcome. Every bracket submission and refresh now supplies direction-specific `alert_loss` and `alert_profit` values. | Medium |
+| TV-006 | `futures_v7_5.pine` — coincident administrative exits | Daily-loss, maximum-drawdown, and session controls could all submit `strategy.close_all` on the same evaluation. The strategy now selects one deterministic close reason: maximum drawdown, then daily loss, then session. Session state and flat-order cancellation are still processed when another reason has priority. | Medium |
+| TV-007 | `futures_v7_5.pine` — ambiguous administrative `alert()` payload | All administrative conditions emitted the same `ADMINISTRATIVE_EXIT` event, forcing a consumer to infer the actual policy trigger. The alert now reports `MAXIMUM_DRAWDOWN_EXIT`, `DAILY_LOSS_EXIT`, or `SESSION_EXIT`, using the same priority as the close request. | Low |
 
 #### TV-001 resolution
 
@@ -83,7 +83,7 @@ V7.3 included market, session, and date eligibility inside its directional
 setup. Consequently, a filter transition could manufacture a new setup, or a
 genuine technical transition could disappear before a temporary gate opened.
 
-V7.4 separates the pipeline into:
+V7.5 separates the pipeline into:
 
 1. technical score and directional setup;
 2. a technical transition with a configurable `Signal Validity Bars` latch;
@@ -233,8 +233,8 @@ or environment configuration.
   attainable live price.
 - The drawdown peak includes open P&L and is stricter than a closed-equity-only
   calculation, but is still sampled only when the script evaluates.
-- Entry, protective-exit, and reason-specific administrative alert payloads are
-  available for TradingView alerts. The script still has no webhook receiver,
+- Entry, protective-exit, and reason-specific administrative alerts use the
+  published versioned JSON contract. The script still has no webhook receiver,
   broker API, partial-fill handling, authentication, or reconciliation service.
 - Test point value, tick size, commission, timezone, session boundaries, and
   continuous-contract roll behavior for every futures symbol.
