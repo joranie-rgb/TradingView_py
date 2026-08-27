@@ -286,6 +286,51 @@ bool entryWindowOpen = strategy.position_size == 0 and cooldownComplete and bars
 bool enterLong = enableLongEntries and entryWindowOpen and longSignalActive and positionSizeQualified
 bool enterShort = enableShortEntries and entryWindowOpen and shortSignalActive and positionSizeQualified
 
+// Explain the first execution gate that blocks each directional workflow. This
+// is display-only state: it does not participate in either entry condition.
+entryBlocker(bool directionEnabled, bool technicalSetup, bool signalActive) =>
+    string blocker = "READY"
+    if not directionEnabled
+        blocker := "DISABLED"
+    else if strategy.position_size != 0
+        blocker := "POSITION OPEN"
+    else if not calculationsReady
+        blocker := "INDICATORS NOT READY"
+    else if not technicalSetup
+        blocker := "NO TECHNICAL SETUP"
+    else if not signalActive
+        blocker := "SIGNAL EXPIRED"
+    else if useBacktestDateFilter and not insideBacktestRange
+        blocker := "OUTSIDE BACKTEST RANGE"
+    else if useEntrySession and not insideEntrySession
+        blocker := "OUTSIDE ENTRY SESSION"
+    else if useSessionExit and (insideSessionExitWindow or sessionExitProcessed)
+        blocker := "OUTSIDE ENTRY SESSION"
+    else if atrPercent < minimumAtrPercent
+        blocker := "ATR FILTER"
+    else if not volumeQualified
+        blocker := "VOLUME FILTER"
+    else if not cooldownComplete
+        blocker := "COOLDOWN"
+    else if administrativeExitRequested
+        blocker := "ADMINISTRATIVE EXIT"
+    else if dailyTradeLimitReached
+        blocker := "DAILY TRADE LIMIT"
+    else if dailyLossEntryLock
+        blocker := "DAILY LOSS LOCK"
+    else if maximumDrawdownLocked
+        blocker := "DRAWDOWN LOCK"
+    else if reserveDailyLossCapacity and useDailyLossLimit and dailyCapacityContracts < minimumContracts
+        blocker := "DAILY CAPACITY"
+    else if useNotionalExposureLimit and notionalBasedContracts < minimumContracts
+        blocker := "NOTIONAL CAP"
+    else if not positionSizeQualified
+        blocker := "MINIMUM SIZE"
+    blocker
+
+string longEntryBlocker = entryBlocker(enableLongEntries, longTechnicalSetup, longSignalActive)
+string shortEntryBlocker = entryBlocker(enableShortEntries, shortTechnicalSetup, shortSignalActive)
+
 var int plannedStopTicks = na
 var int plannedTargetTicks = na
 var int plannedDirection = 0
@@ -350,7 +395,7 @@ if administrativeExitReason == 2
 if administrativeExitReason == 3
     alert("SESSION_EXIT", alert.freq_once_per_bar_close)
 
-var table dashboard = table.new(position.top_right, 2, 15, border_width = 1)
+var table dashboard = table.new(position.top_right, 2, 17, border_width = 1)
 if barstate.islast
     if showDashboard
         table.cell(dashboard, 0, 0, "Metric", bgcolor = color.gray, text_color = color.white)
@@ -383,5 +428,9 @@ if barstate.islast
         table.cell(dashboard, 1, 13, useMaximumDrawdownLimit ? str.tostring(strategyDrawdownPercent, "#.00") + "% / " + (maximumDrawdownLocked ? "LOCKED" : "OPEN") : "DISABLED", text_color = useMaximumDrawdownLimit and maximumDrawdownLocked ? color.red : useMaximumDrawdownLimit ? color.green : color.gray)
         table.cell(dashboard, 0, 14, "Tick / point / tick value")
         table.cell(dashboard, 1, 14, str.tostring(syminfo.mintick) + " / " + str.tostring(syminfo.pointvalue) + " / " + str.tostring(syminfo.mintick * syminfo.pointvalue, "#.########"))
+        table.cell(dashboard, 0, 15, "Long entry status")
+        table.cell(dashboard, 1, 15, longEntryBlocker, text_color = longEntryBlocker == "READY" ? color.green : longEntryBlocker == "DISABLED" ? color.gray : color.orange)
+        table.cell(dashboard, 0, 16, "Short entry status")
+        table.cell(dashboard, 1, 16, shortEntryBlocker, text_color = shortEntryBlocker == "READY" ? color.green : shortEntryBlocker == "DISABLED" ? color.gray : color.orange)
     else
-        table.clear(dashboard, 0, 0, 1, 14)
+        table.clear(dashboard, 0, 0, 1, 16)

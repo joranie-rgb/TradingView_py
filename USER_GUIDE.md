@@ -334,8 +334,11 @@ own cutoff.
 - **Dashboard** shows current position, daily P&L, effective risk budget,
   per-contract risk, calculated quantity, scores, signal age, daily capacity,
   notional cap, drawdown-lock state, and TradingView's reported minimum tick,
-  point value, and cash tick value. Compare all three metadata values with the
-  venue's contract specification; display does not prove that the feed is right.
+  point value, cash tick value, and separate long and short entry statuses. Each
+  directional status reports `READY` or the first gate currently blocking that
+  workflow, such as an expired signal, session boundary, market filter, cooldown,
+  risk lock, or sizing cap. Compare all three metadata values with the venue's
+  contract specification; display does not prove that the feed is right.
 
 `na` in signal age means no qualifying setup event has occurred in the loaded
 history. Zero calculated quantity means at least one enabled sizing constraint
