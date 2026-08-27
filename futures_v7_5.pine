@@ -1,0 +1,474 @@
+//@version=6
+strategy(
+     title = "AI Futures Strategy - Version 7.5 Structured Alerts",
+     shorttitle = "Futures V7.5",
+     overlay = true,
+     initial_capital = 100000,
+     currency = currency.USD,
+     pyramiding = 0,
+     commission_type = strategy.commission.cash_per_contract,
+     commission_value = 2.50,
+     slippage = 1,
+     calc_on_order_fills = false,
+     calc_on_every_tick = false,
+     process_orders_on_close = true,
+     use_bar_magnifier = false,
+     margin_long = 100,
+     margin_short = 100
+)
+
+// This revision deliberately uses only confirmed chart bars. Market orders are
+// processed on that bar's closing tick. Both bar endpoints must remain inside
+// the approved session and backtest range, so the closing-tick fill cannot drift
+// beyond either configured boundary.
+
+string GROUP_DIRECTION = "1. Trade Direction"
+string GROUP_TREND = "2. Trend"
+string GROUP_MOMENTUM = "3. Momentum"
+string GROUP_FILTERS = "4. Market Filters"
+string GROUP_SIGNAL = "5. Signal Controls"
+string GROUP_RISK = "6. Position Sizing and Trade Risk"
+string GROUP_DAILY = "7. Daily Risk Controls"
+string GROUP_SESSION = "8. Session Management"
+string GROUP_BACKTEST = "9. Backtest Integrity"
+string GROUP_DISPLAY = "10. Display"
+
+bool enableLongEntries = input.bool(true, "Enable Long Entries", group = GROUP_DIRECTION)
+bool enableShortEntries = input.bool(true, "Enable Short Entries", group = GROUP_DIRECTION)
+
+int emaFastLength = input.int(9, "Fast EMA Length", minval = 1, group = GROUP_TREND)
+int emaSlowLength = input.int(21, "Slow EMA Length", minval = 2, group = GROUP_TREND)
+int emaSlopeLookback = input.int(3, "EMA Slope Lookback", minval = 1, maxval = 50, group = GROUP_TREND)
+float minimumEmaSeparationAtr = input.float(0.10, "Minimum EMA Separation in ATR", minval = 0, step = 0.05, group = GROUP_TREND)
+
+int rsiLength = input.int(14, "RSI Length", minval = 2, group = GROUP_MOMENTUM)
+float rsiLongMinimum = input.float(52, "Minimum RSI for Long", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM, active = enableLongEntries)
+float rsiLongMaximum = input.float(80, "Maximum RSI for Long", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM, active = enableLongEntries)
+float rsiShortMinimum = input.float(20, "Minimum RSI for Short", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM, active = enableShortEntries)
+float rsiShortMaximum = input.float(48, "Maximum RSI for Short", minval = 0, maxval = 100, step = 0.5, group = GROUP_MOMENTUM, active = enableShortEntries)
+int macdFastLength = input.int(12, "MACD Fast Length", minval = 1, group = GROUP_MOMENTUM)
+int macdSlowLength = input.int(26, "MACD Slow Length", minval = 2, group = GROUP_MOMENTUM)
+int macdSignalLength = input.int(9, "MACD Signal Length", minval = 1, group = GROUP_MOMENTUM)
+
+int atrLength = input.int(14, "ATR Length", minval = 1, group = GROUP_FILTERS)
+float minimumAtrPercent = input.float(0.05, "Minimum ATR as Percent of Price", minval = 0, step = 0.01, group = GROUP_FILTERS)
+bool useVolumeFilter = input.bool(false, "Use Relative Volume Filter", group = GROUP_FILTERS)
+int volumeAverageLength = input.int(20, "Volume Average Length", minval = 1, group = GROUP_FILTERS, active = useVolumeFilter)
+float minimumRelativeVolume = input.float(1, "Minimum Relative Volume", minval = 0, step = 0.1, group = GROUP_FILTERS, active = useVolumeFilter)
+
+int minimumSignalScore = input.int(7, "Minimum Signal Score", minval = 1, maxval = 12, group = GROUP_SIGNAL)
+bool requireNewSetup = input.bool(true, "Require New Setup Transition", group = GROUP_SIGNAL)
+int signalValidityBars = input.int(3, "Signal Validity Bars", minval = 0, maxval = 100, group = GROUP_SIGNAL,
+     tooltip = "Keeps a fresh technical setup eligible while independent session, volatility, volume, cooldown, or risk gates temporarily block entry. Zero means the event bar only.", active = requireNewSetup)
+int cooldownBars = input.int(5, "Cooldown Bars After Position Closes", minval = 0, maxval = 500, group = GROUP_SIGNAL)
+
+float accountRiskPercent = input.float(0.5, "Account Risk per Trade (%)", minval = 0.01, maxval = 10, step = 0.05, group = GROUP_RISK)
+float stopAtrMultiple = input.float(1.5, "Stop-Loss ATR Multiple", minval = 0.1, maxval = 20, step = 0.1, group = GROUP_RISK)
+float rewardRiskRatio = input.float(2, "Reward-to-Risk Target", minval = 0.1, maxval = 20, step = 0.1, group = GROUP_RISK)
+int minimumContracts = input.int(1, "Minimum Contracts", minval = 1, maxval = 100000, group = GROUP_RISK)
+int maximumContracts = input.int(10, "Maximum Contracts", minval = 1, maxval = 100000, group = GROUP_RISK)
+bool skipTradeWhenRiskTooHigh = input.bool(true, "Skip Trade When Minimum Size Exceeds Risk", group = GROUP_RISK)
+float sizingBufferTicks = input.float(2, "Entry/Slippage Risk Buffer in Ticks", minval = 0, step = 1, group = GROUP_RISK)
+float roundTripCommission = input.float(5, "Estimated Round-Trip Commission per Contract", minval = 5, step = 0.01, group = GROUP_RISK,
+     tooltip = "Keep this synchronized with twice the strategy commission_value. It is included in sizing, not charged a second time.")
+bool useNotionalExposureLimit = input.bool(true, "Limit Notional Exposure", group = GROUP_RISK)
+float maximumNotionalExposurePercent = input.float(100, "Maximum Notional Exposure (% of Equity)", minval = 1, maxval = 1000, step = 5, group = GROUP_RISK, active = useNotionalExposureLimit)
+bool useDailyLossLimit = input.bool(true, "Enable Daily Loss Limit", group = GROUP_DAILY)
+bool reserveDailyLossCapacity = input.bool(true, "Cap New Trade Risk at Remaining Daily Loss Capacity", group = GROUP_RISK,
+     tooltip = "Prevents a planned trade from risking more than the unused daily-loss allowance. Gaps can still exceed modeled risk.", active = useDailyLossLimit)
+
+bool useDailyTradeLimit = input.bool(true, "Enable Daily Trade Limit", group = GROUP_DAILY)
+int maximumTradesPerDay = input.int(3, "Maximum Filled Trades per Day", minval = 1, group = GROUP_DAILY, active = useDailyTradeLimit)
+string dailyLossMode = input.string("Percent", "Daily Loss Limit Mode", options = ["Percent", "Cash"], group = GROUP_DAILY, active = useDailyLossLimit)
+float dailyLossPercent = input.float(1.5, "Maximum Daily Loss (%)", minval = 0.01, maxval = 100, step = 0.05, group = GROUP_DAILY, active = useDailyLossLimit and dailyLossMode == "Percent")
+float dailyLossCash = input.float(1500, "Maximum Daily Loss (Cash)", minval = 1, step = 50, group = GROUP_DAILY, active = useDailyLossLimit and dailyLossMode == "Cash")
+bool includeOpenPnlInDailyLimit = input.bool(true, "Include Open P&L in Daily Loss", group = GROUP_DAILY, active = useDailyLossLimit)
+bool closePositionAtDailyLoss = input.bool(true, "Close Position at Daily Loss Limit", group = GROUP_DAILY, active = useDailyLossLimit)
+bool lockTradingAfterDailyLoss = input.bool(true, "Lock Trading for Rest of Risk Day", group = GROUP_DAILY, active = useDailyLossLimit)
+bool useMaximumDrawdownLimit = input.bool(true, "Enable Strategy Drawdown Lock", group = GROUP_DAILY)
+float maximumDrawdownPercent = input.float(10, "Maximum Drawdown from Peak Equity (%)", minval = 0.1, maxval = 100, step = 0.1, group = GROUP_DAILY, active = useMaximumDrawdownLimit)
+bool closePositionAtMaximumDrawdown = input.bool(true, "Close Position at Drawdown Limit", group = GROUP_DAILY, active = useMaximumDrawdownLimit)
+
+string sessionTimezone = input.string("America/New_York", "Session and Daily Reset Timezone", group = GROUP_SESSION)
+bool useEntrySession = input.bool(true, "Restrict Entries to Session", group = GROUP_SESSION)
+string entrySession = input.session("0930-1545", "Entry Session", group = GROUP_SESSION, active = useEntrySession)
+bool useSessionExit = input.bool(true, "Enable Forced Session Exit", group = GROUP_SESSION)
+string sessionExitWindow = input.session("1550-1555", "Session Exit Trigger Window", group = GROUP_SESSION, active = useSessionExit)
+bool useSessionExitCutoffFallback = input.bool(true, "Use Session Exit Cutoff Fallback", group = GROUP_SESSION,
+     tooltip = "Also exits on the first confirmed bar at or after the cutoff. This prevents a narrow trigger window from being missed by chart-bar alignment.", active = useSessionExit)
+int sessionExitCutoffHour = input.int(15, "Session Exit Cutoff Hour", minval = 0, maxval = 23, group = GROUP_SESSION, active = useSessionExit and useSessionExitCutoffFallback)
+int sessionExitCutoffMinute = input.int(50, "Session Exit Cutoff Minute", minval = 0, maxval = 59, group = GROUP_SESSION, active = useSessionExit and useSessionExitCutoffFallback)
+bool cancelOrdersAtSessionExit = input.bool(true, "Cancel Pending Orders at Session Exit", group = GROUP_SESSION, active = useSessionExit)
+
+bool blockNonStandardCharts = input.bool(true, "Block Nonstandard Chart Types", group = GROUP_BACKTEST)
+bool requireIntradayChart = input.bool(true, "Require Intraday Chart", group = GROUP_BACKTEST,
+     tooltip = "Session controls are not reliable on daily or higher chart bars.")
+int maximumChartTimeframeMinutes = input.int(60, "Maximum Chart Timeframe (Minutes)", minval = 1, maxval = 1440, group = GROUP_BACKTEST)
+bool useBacktestDateFilter = input.bool(false, "Use Backtest Date Range", group = GROUP_BACKTEST)
+int backtestStartTime = input.time(timestamp("01 Jan 2020 00:00 +0000"), "Backtest Start", group = GROUP_BACKTEST, active = useBacktestDateFilter)
+int backtestEndTime = input.time(timestamp("31 Dec 2099 23:59 +0000"), "Backtest End", group = GROUP_BACKTEST, active = useBacktestDateFilter)
+
+bool showSignalMarkers = input.bool(true, "Show Signal Markers", group = GROUP_DISPLAY)
+bool showRiskLevels = input.bool(true, "Show Active Stop and Target", group = GROUP_DISPLAY)
+bool showDashboard = input.bool(true, "Show Dashboard", group = GROUP_DISPLAY)
+
+float chartTimeframeSeconds = timeframe.in_seconds()
+
+if barstate.isfirst and emaFastLength >= emaSlowLength
+    runtime.error("Fast EMA Length must be less than Slow EMA Length.")
+if barstate.isfirst and macdFastLength >= macdSlowLength
+    runtime.error("MACD Fast Length must be less than MACD Slow Length.")
+if barstate.isfirst and enableLongEntries and rsiLongMinimum >= rsiLongMaximum
+    runtime.error("Minimum RSI for Long must be below its maximum.")
+if barstate.isfirst and enableShortEntries and rsiShortMinimum >= rsiShortMaximum
+    runtime.error("Minimum RSI for Short must be below its maximum.")
+if barstate.isfirst and minimumContracts > maximumContracts
+    runtime.error("Minimum Contracts cannot exceed Maximum Contracts.")
+if barstate.isfirst and useBacktestDateFilter and backtestStartTime >= backtestEndTime
+    runtime.error("Backtest Start must precede Backtest End.")
+if barstate.isfirst and blockNonStandardCharts and not chart.is_standard
+    runtime.error("Use a standard OHLC chart for an execution backtest.")
+if barstate.isfirst and requireIntradayChart and not timeframe.isintraday
+    runtime.error("This configuration requires an intraday chart for session-aware execution.")
+if barstate.isfirst and na(chartTimeframeSeconds)
+    runtime.error("Time-based chart bars are required for session-aware execution.")
+if barstate.isfirst and chartTimeframeSeconds > maximumChartTimeframeMinutes * 60
+    runtime.error("Chart timeframe exceeds Maximum Chart Timeframe Minutes.")
+if barstate.isfirst and (syminfo.mintick <= 0 or syminfo.pointvalue <= 0)
+    runtime.error("The chart symbol must provide positive minimum-tick and point-value metadata.")
+
+bool insideBacktestRange = not useBacktestDateFilter or time >= backtestStartTime and time_close <= backtestEndTime
+int currentRiskDay = time("1D", "0000-2359", sessionTimezone)
+// Alert payload contract: see ALERT_SCHEMA.md. Timestamps are Unix milliseconds.
+// Keep this function side-effect free so structured messages do not change the
+// confirmed-bar event timing or any order condition.
+jsonIntOrNull(int value) =>
+    na(value) ? "null" : str.tostring(value)
+
+jsonNumberOrNull(float value) =>
+    na(value) ? "null" : str.tostring(value)
+
+alertPayload(string eventName, string action, string direction, float quantity, int bracketStopTicks, int bracketTargetTicks, int signalTimestamp, int submissionTimestamp, int expirationTimestamp, string administrativeReason) =>
+    string eventIdentifier = syminfo.tickerid + ":" + timeframe.period + ":" + str.tostring(submissionTimestamp) + ":" + eventName
+    "{" +
+      "\"schema_version\":\"1.0.0\"," +
+      "\"strategy_version\":\"7.5\"," +
+      "\"event_id\":\"" + eventIdentifier + "\"," +
+      "\"event\":\"" + eventName + "\"," +
+      "\"symbol\":\"" + syminfo.ticker + "\"," +
+      "\"exchange\":\"" + syminfo.prefix + "\"," +
+      "\"timeframe\":\"" + timeframe.period + "\"," +
+      "\"signal_timestamp\":" + jsonIntOrNull(signalTimestamp) + "," +
+      "\"expiration_timestamp\":" + jsonIntOrNull(expirationTimestamp) + "," +
+      "\"action\":\"" + action + "\"," +
+      "\"direction\":\"" + direction + "\"," +
+      "\"quantity\":" + jsonNumberOrNull(quantity) + "," +
+      "\"planned_bracket_ticks\":{\"stop\":" + jsonIntOrNull(bracketStopTicks) + ",\"target\":" + jsonIntOrNull(bracketTargetTicks) + "}," +
+      "\"risk_day_id\":" + jsonIntOrNull(currentRiskDay) + "," +
+      "\"administrative_reason\":" + (administrativeReason == "" ? "null" : "\"" + administrativeReason + "\"") +
+    "}"
+
+bool newRiskDay = not na(currentRiskDay[1]) and currentRiskDay != currentRiskDay[1]
+bool barOpensInsideEntrySession = not na(time(timeframe.period, entrySession, sessionTimezone))
+bool barClosesInsideEntrySession = not na(time_close(timeframe.period, entrySession, sessionTimezone))
+bool insideEntrySession = barOpensInsideEntrySession and barClosesInsideEntrySession
+bool insideSessionExitWindow = not na(time(timeframe.period, sessionExitWindow, sessionTimezone))
+int sessionExitCutoffTimestamp = timestamp(sessionTimezone, year(time, sessionTimezone), month(time, sessionTimezone), dayofmonth(time, sessionTimezone), sessionExitCutoffHour, sessionExitCutoffMinute)
+// Anchor the cutoff to the bar-open calendar date and compare absolute times.
+// Unlike minute-of-day arithmetic, this catches a 23:30-00:30 bar spanning a
+// 23:50 cutoff while keeping an after-midnight bar below the new day's cutoff.
+bool barReachesSessionExitCutoff = time_close >= sessionExitCutoffTimestamp
+
+float emaFast = ta.ema(close, emaFastLength)
+float emaSlow = ta.ema(close, emaSlowLength)
+float rsiValue = ta.rsi(close, rsiLength)
+float atrValue = ta.atr(atrLength)
+[macdLine, macdSignalLine, macdHistogram] = ta.macd(close, macdFastLength, macdSlowLength, macdSignalLength)
+float averageVolume = ta.sma(volume, volumeAverageLength)
+float relativeVolume = not na(averageVolume) and averageVolume > 0 ? volume / averageVolume : 0
+float atrPercent = close > 0 ? atrValue / close * 100 : 0
+float emaSeparationAtr = atrValue > 0 ? math.abs(emaFast - emaSlow) / atrValue : 0
+
+bool bullishAlignment = emaFast > emaSlow
+bool bearishAlignment = emaFast < emaSlow
+bool freshBullCross = ta.crossover(emaFast, emaSlow)
+bool freshBearCross = ta.crossunder(emaFast, emaSlow)
+bool fastEmaRising = not na(emaFast[emaSlopeLookback]) and emaFast > emaFast[emaSlopeLookback]
+bool fastEmaFalling = not na(emaFast[emaSlopeLookback]) and emaFast < emaFast[emaSlopeLookback]
+bool freshMacdBullCross = ta.crossover(macdLine, macdSignalLine)
+bool freshMacdBearCross = ta.crossunder(macdLine, macdSignalLine)
+bool rsiSupportsLong = rsiValue >= rsiLongMinimum and rsiValue < rsiLongMaximum
+bool rsiSupportsShort = rsiValue > rsiShortMinimum and rsiValue <= rsiShortMaximum
+bool calculationsReady = not na(emaSlow) and not na(rsiValue) and not na(atrValue) and not na(macdHistogram)
+bool volumeQualified = not useVolumeFilter or not na(volume) and not na(averageVolume) and averageVolume > 0 and relativeVolume >= minimumRelativeVolume
+bool indicatorFiltersQualified = calculationsReady and atrPercent >= minimumAtrPercent and volumeQualified
+bool executionTimeQualified = (not useEntrySession or insideEntrySession) and insideBacktestRange
+
+int longScore = (bullishAlignment ? 2 : 0) + (freshBullCross ? 2 : 0) + (fastEmaRising ? 1 : 0) + (close > emaFast ? 1 : 0) + (emaSeparationAtr >= minimumEmaSeparationAtr ? 1 : 0) + (macdLine > macdSignalLine ? 1 : 0) + (macdHistogram > 0 ? 1 : 0) + (not na(macdHistogram[1]) and macdHistogram > macdHistogram[1] ? 1 : 0) + (freshMacdBullCross ? 1 : 0) + (rsiSupportsLong ? 1 : 0)
+int shortScore = (bearishAlignment ? 2 : 0) + (freshBearCross ? 2 : 0) + (fastEmaFalling ? 1 : 0) + (close < emaFast ? 1 : 0) + (emaSeparationAtr >= minimumEmaSeparationAtr ? 1 : 0) + (macdLine < macdSignalLine ? 1 : 0) + (macdHistogram < 0 ? 1 : 0) + (not na(macdHistogram[1]) and macdHistogram < macdHistogram[1] ? 1 : 0) + (freshMacdBearCross ? 1 : 0) + (rsiSupportsShort ? 1 : 0)
+
+// Technical intent is deliberately independent from execution filters and risk
+// locks. In V7.3, including marketQualified in the transition could consume or
+// manufacture a "new" signal merely because volume/session eligibility changed.
+bool longTechnicalSetup = enableLongEntries and calculationsReady and longScore >= minimumSignalScore and (not enableShortEntries or longScore > shortScore) and bullishAlignment and fastEmaRising and rsiSupportsLong
+bool shortTechnicalSetup = enableShortEntries and calculationsReady and shortScore >= minimumSignalScore and (not enableLongEntries or shortScore > longScore) and bearishAlignment and fastEmaFalling and rsiSupportsShort
+bool longSetupEvent = requireNewSetup ? longTechnicalSetup and not longTechnicalSetup[1] : longTechnicalSetup
+bool shortSetupEvent = requireNewSetup ? shortTechnicalSetup and not shortTechnicalSetup[1] : shortTechnicalSetup
+int barsSinceLongSetup = ta.barssince(longSetupEvent)
+int barsSinceShortSetup = ta.barssince(shortSetupEvent)
+int longSetupTimestamp = ta.valuewhen(longSetupEvent, time_close, 0)
+int shortSetupTimestamp = ta.valuewhen(shortSetupEvent, time_close, 0)
+bool longSignalActive = longTechnicalSetup and not na(barsSinceLongSetup) and barsSinceLongSetup <= signalValidityBars
+bool shortSignalActive = shortTechnicalSetup and not na(barsSinceShortSetup) and barsSinceShortSetup <= signalValidityBars
+
+bool newPositionOpened = strategy.position_size != 0 and strategy.position_size[1] == 0
+int cumulativeTradeCount = strategy.opentrades + strategy.closedtrades
+int newlyOpenedTradeCount = math.max(cumulativeTradeCount - nz(cumulativeTradeCount[1], cumulativeTradeCount), 0)
+bool positionJustClosed = strategy.closedtrades > nz(strategy.closedtrades[1], strategy.closedtrades)
+var float dayStartingEquity = na
+var float dayStartingNetProfit = na
+var int tradesToday = 0
+var bool dailyLossLocked = false
+var bool sessionExitProcessed = false
+var int lastExitBar = na
+var float peakStrategyEquity = na
+var bool maximumDrawdownLocked = false
+
+if barstate.isfirst or newRiskDay
+    dayStartingEquity := strategy.equity
+    dayStartingNetProfit := strategy.netprofit
+    tradesToday := 0
+    dailyLossLocked := false
+    sessionExitProcessed := false
+if barstate.isfirst
+    peakStrategyEquity := strategy.equity
+    maximumDrawdownLocked := false
+peakStrategyEquity := math.max(nz(peakStrategyEquity, strategy.equity), strategy.equity)
+if newlyOpenedTradeCount > 0
+    tradesToday += newlyOpenedTradeCount
+if positionJustClosed
+    lastExitBar := bar_index
+
+float dailyRealizedPnl = strategy.netprofit - dayStartingNetProfit
+float dailyMarkedToMarketPnl = strategy.equity - dayStartingEquity
+float monitoredDailyPnl = includeOpenPnlInDailyLimit ? dailyMarkedToMarketPnl : dailyRealizedPnl
+float dailyLossAllowance = dailyLossMode == "Percent" ? dayStartingEquity * dailyLossPercent / 100 : dailyLossCash
+bool dailyLossThresholdReached = barstate.isconfirmed and useDailyLossLimit and monitoredDailyPnl <= -dailyLossAllowance
+if dailyLossThresholdReached
+    dailyLossLocked := true
+bool dailyLossEntryLock = useDailyLossLimit and (lockTradingAfterDailyLoss ? dailyLossLocked : dailyLossThresholdReached)
+bool dailyTradeLimitReached = useDailyTradeLimit and tradesToday >= maximumTradesPerDay
+bool cooldownComplete = na(lastExitBar) or bar_index - lastExitBar > cooldownBars
+float strategyDrawdownPercent = peakStrategyEquity > 0 ? (peakStrategyEquity - strategy.equity) / peakStrategyEquity * 100 : 0
+bool maximumDrawdownReached = barstate.isconfirmed and useMaximumDrawdownLimit and strategyDrawdownPercent >= maximumDrawdownPercent
+if maximumDrawdownReached
+    maximumDrawdownLocked := true
+
+// Round upward so the requested stop is never tighter than the ATR distance.
+int stopTicks = int(math.ceil(atrValue * stopAtrMultiple / syminfo.mintick))
+int targetTicks = int(math.ceil(stopTicks * rewardRiskRatio))
+float modeledPriceRisk = (stopTicks + sizingBufferTicks) * syminfo.mintick * syminfo.pointvalue
+float riskPerContract = modeledPriceRisk + roundTripCommission
+float accountRiskBudget = math.max(strategy.equity, 0) * accountRiskPercent / 100
+float remainingDailyLossCapacity = useDailyLossLimit ? math.max(dailyLossAllowance + monitoredDailyPnl, 0) : accountRiskBudget
+float effectiveRiskBudget = reserveDailyLossCapacity and useDailyLossLimit ? math.min(accountRiskBudget, remainingDailyLossCapacity) : accountRiskBudget
+int riskBasedContracts = riskPerContract > 0 ? int(math.floor(accountRiskBudget / riskPerContract)) : 0
+int dailyCapacityContracts = not reserveDailyLossCapacity or not useDailyLossLimit ? maximumContracts : riskPerContract > 0 ? int(math.floor(remainingDailyLossCapacity / riskPerContract)) : 0
+float contractNotional = close > 0 ? close * syminfo.pointvalue : 0
+float maximumNotional = math.max(strategy.equity, 0) * maximumNotionalExposurePercent / 100
+int notionalBasedContracts = not useNotionalExposureLimit ? maximumContracts : contractNotional > 0 ? int(math.floor(maximumNotional / contractNotional)) : 0
+int riskSizingContracts = skipTradeWhenRiskTooHigh ? riskBasedContracts : math.max(riskBasedContracts, minimumContracts)
+int allowedContracts = math.min(math.min(math.min(riskSizingContracts, dailyCapacityContracts), notionalBasedContracts), maximumContracts)
+int calculatedContracts = allowedContracts >= minimumContracts ? allowedContracts : 0
+bool minimumPositionWithinRisk = riskBasedContracts >= minimumContracts
+bool hardRiskCapsQualified = dailyCapacityContracts >= minimumContracts and notionalBasedContracts >= minimumContracts
+bool positionSizeQualified = calculationsReady and stopTicks > 0 and effectiveRiskBudget > 0 and allowedContracts >= minimumContracts and hardRiskCapsQualified and (not skipTradeWhenRiskTooHigh or minimumPositionWithinRisk)
+
+// In non-latching mode, recovery above the threshold re-enables both entries
+// and normal position management. Use the same effective lock for liquidation;
+// the historical latch is intentionally relevant only when the user requests a
+// rest-of-day lock.
+bool dailyLossExitRequired = dailyLossEntryLock and closePositionAtDailyLoss and strategy.position_size != 0 and barstate.isconfirmed
+bool maximumDrawdownExitRequired = maximumDrawdownLocked and closePositionAtMaximumDrawdown and strategy.position_size != 0 and barstate.isconfirmed
+bool sessionExitTrigger = insideSessionExitWindow or useSessionExitCutoffFallback and barReachesSessionExitCutoff
+bool sessionExitRequired = useSessionExit and sessionExitTrigger and not sessionExitProcessed and barstate.isconfirmed
+// Select one deterministic reason when controls coincide. Drawdown has the
+// broadest scope, followed by the daily risk limit and then the session policy.
+// This avoids submitting multiple close-all requests for the same position.
+int administrativeExitReason = maximumDrawdownExitRequired ? 1 : dailyLossExitRequired ? 2 : sessionExitRequired ? 3 : 0
+var int plannedStopTicks = na
+var int plannedTargetTicks = na
+var int plannedDirection = 0
+var float activeStopPrice = na
+var float activeTargetPrice = na
+
+bool administrativeExitRequested = administrativeExitReason != 0
+string maximumDrawdownPayload = alertPayload("MAXIMUM_DRAWDOWN_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, time_close, "MAXIMUM_DRAWDOWN")
+string dailyLossPayload = alertPayload("DAILY_LOSS_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, time_close, "DAILY_LOSS_LIMIT")
+string sessionExitPayload = alertPayload("SESSION_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, time_close, "SESSION_CUTOFF")
+// A flat strategy can still have an unfilled order. Remember when the session
+// guard cancels it so its frozen plan can be cleared below.
+bool pendingEntryCancelledAtSessionExit = sessionExitRequired and cancelOrdersAtSessionExit and strategy.position_size == 0
+if administrativeExitReason == 1
+    // Keep protective brackets working until the immediate close is processed.
+    strategy.close_all(comment = "Maximum Drawdown Exit", immediately = true, alert_message = maximumDrawdownPayload)
+if administrativeExitReason == 2
+    // Keep protective brackets working until the immediate close is processed.
+    strategy.close_all(comment = "Daily Loss Exit", immediately = true, alert_message = dailyLossPayload)
+if sessionExitRequired
+    if cancelOrdersAtSessionExit and strategy.position_size == 0
+        strategy.cancel_all()
+    if strategy.position_size != 0 and administrativeExitReason == 3
+        strategy.close_all(comment = "Session Exit", immediately = true, alert_message = sessionExitPayload)
+    sessionExitProcessed := true
+
+bool entryWindowOpen = strategy.position_size == 0 and cooldownComplete and barstate.isconfirmed and executionTimeQualified and indicatorFiltersQualified and not administrativeExitRequested and not dailyTradeLimitReached and not dailyLossEntryLock and not maximumDrawdownLocked and not (useSessionExit and insideSessionExitWindow) and not sessionExitProcessed
+bool enterLong = enableLongEntries and entryWindowOpen and longSignalActive and positionSizeQualified
+bool enterShort = enableShortEntries and entryWindowOpen and shortSignalActive and positionSizeQualified
+
+// Explain the first execution gate that blocks each directional workflow. This
+// is display-only state: it does not participate in either entry condition.
+entryBlocker(bool directionEnabled, bool technicalSetup, bool signalActive) =>
+    string blocker = "READY"
+    if not directionEnabled
+        blocker := "DISABLED"
+    else if strategy.position_size != 0
+        blocker := "POSITION OPEN"
+    else if not calculationsReady
+        blocker := "INDICATORS NOT READY"
+    else if not technicalSetup
+        blocker := "NO TECHNICAL SETUP"
+    else if not signalActive
+        blocker := "SIGNAL EXPIRED"
+    else if useBacktestDateFilter and not insideBacktestRange
+        blocker := "OUTSIDE BACKTEST RANGE"
+    else if useEntrySession and not insideEntrySession
+        blocker := "OUTSIDE ENTRY SESSION"
+    else if useSessionExit and (insideSessionExitWindow or sessionExitProcessed)
+        blocker := "OUTSIDE ENTRY SESSION"
+    else if atrPercent < minimumAtrPercent
+        blocker := "ATR FILTER"
+    else if not volumeQualified
+        blocker := "VOLUME FILTER"
+    else if not cooldownComplete
+        blocker := "COOLDOWN"
+    else if administrativeExitRequested
+        blocker := "ADMINISTRATIVE EXIT"
+    else if dailyTradeLimitReached
+        blocker := "DAILY TRADE LIMIT"
+    else if dailyLossEntryLock
+        blocker := "DAILY LOSS LOCK"
+    else if maximumDrawdownLocked
+        blocker := "DRAWDOWN LOCK"
+    else if reserveDailyLossCapacity and useDailyLossLimit and dailyCapacityContracts < minimumContracts
+        blocker := "DAILY CAPACITY"
+    else if useNotionalExposureLimit and notionalBasedContracts < minimumContracts
+        blocker := "NOTIONAL CAP"
+    else if not positionSizeQualified
+        blocker := "MINIMUM SIZE"
+    blocker
+
+string longEntryBlocker = entryBlocker(enableLongEntries, longTechnicalSetup, longSignalActive)
+string shortEntryBlocker = entryBlocker(enableShortEntries, shortTechnicalSetup, shortSignalActive)
+
+if pendingEntryCancelledAtSessionExit
+    plannedStopTicks := na
+    plannedTargetTicks := na
+    plannedDirection := 0
+
+if enterLong and not enterShort
+    plannedStopTicks := stopTicks
+    plannedTargetTicks := targetTicks
+    plannedDirection := 1
+    int longSignalTimestamp = longSetupTimestamp
+    int longExpirationTimestamp = time_close + int(chartTimeframeSeconds * 1000)
+    string longEntryPayload = alertPayload("LONG_ENTRY", "ENTER", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, longSignalTimestamp, time_close, longExpirationTimestamp, "")
+    strategy.entry("Long", strategy.long, qty = calculatedContracts, comment = "Long Entry", alert_message = longEntryPayload)
+    alert(longEntryPayload, alert.freq_once_per_bar_close)
+    // loss/profit are tick distances from the actual fill, avoiding the V7.2
+    // signal-close anchoring bug when slippage changes the modeled fill.
+    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop", alert_profit = alertPayload("LONG_TARGET_EXIT", "EXIT", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""), alert_loss = alertPayload("LONG_STOP_EXIT", "EXIT", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""))
+
+if enterShort and not enterLong
+    plannedStopTicks := stopTicks
+    plannedTargetTicks := targetTicks
+    plannedDirection := -1
+    int shortSignalTimestamp = shortSetupTimestamp
+    int shortExpirationTimestamp = time_close + int(chartTimeframeSeconds * 1000)
+    string shortEntryPayload = alertPayload("SHORT_ENTRY", "ENTER", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, shortSignalTimestamp, time_close, shortExpirationTimestamp, "")
+    strategy.entry("Short", strategy.short, qty = calculatedContracts, comment = "Short Entry", alert_message = shortEntryPayload)
+    alert(shortEntryPayload, alert.freq_once_per_bar_close)
+    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop", alert_profit = alertPayload("SHORT_TARGET_EXIT", "EXIT", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""), alert_loss = alertPayload("SHORT_STOP_EXIT", "EXIT", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""))
+
+if newPositionOpened and plannedDirection == 1
+    activeStopPrice := math.round_to_mintick(strategy.position_avg_price - plannedStopTicks * syminfo.mintick)
+    activeTargetPrice := math.round_to_mintick(strategy.position_avg_price + plannedTargetTicks * syminfo.mintick)
+if newPositionOpened and plannedDirection == -1
+    activeStopPrice := math.round_to_mintick(strategy.position_avg_price + plannedStopTicks * syminfo.mintick)
+    activeTargetPrice := math.round_to_mintick(strategy.position_avg_price - plannedTargetTicks * syminfo.mintick)
+
+if strategy.position_size > 0 and plannedDirection == 1 and not administrativeExitRequested
+    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop", alert_profit = alertPayload("LONG_TARGET_EXIT", "EXIT", "LONG", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""), alert_loss = alertPayload("LONG_STOP_EXIT", "EXIT", "LONG", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""))
+if strategy.position_size < 0 and plannedDirection == -1 and not administrativeExitRequested
+    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop", alert_profit = alertPayload("SHORT_TARGET_EXIT", "EXIT", "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""), alert_loss = alertPayload("SHORT_STOP_EXIT", "EXIT", "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""))
+
+if positionJustClosed
+    plannedStopTicks := na
+    plannedTargetTicks := na
+    plannedDirection := 0
+    activeStopPrice := na
+    activeTargetPrice := na
+
+plot(emaFast, "Fast EMA", color.blue, 2)
+plot(emaSlow, "Slow EMA", color.orange, 2)
+plot(showRiskLevels and strategy.position_size != 0 ? activeStopPrice : na, "Fill-relative Stop", color.red, 2, plot.style_linebr)
+plot(showRiskLevels and strategy.position_size != 0 ? activeTargetPrice : na, "Fill-relative Target", color.green, 2, plot.style_linebr)
+plotshape(showSignalMarkers and enterLong and not enterShort, "Long Signal", shape.labelup, location.belowbar, color.green, text = "LONG", textcolor = color.white)
+plotshape(showSignalMarkers and enterShort and not enterLong, "Short Signal", shape.labeldown, location.abovebar, color.red, text = "SHORT", textcolor = color.white)
+
+if administrativeExitReason == 1
+    alert(maximumDrawdownPayload, alert.freq_once_per_bar_close)
+if administrativeExitReason == 2
+    alert(dailyLossPayload, alert.freq_once_per_bar_close)
+if administrativeExitReason == 3
+    alert(sessionExitPayload, alert.freq_once_per_bar_close)
+
+var table dashboard = table.new(position.top_right, 2, 17, border_width = 1)
+if barstate.islast
+    if showDashboard
+        table.cell(dashboard, 0, 0, "Metric", bgcolor = color.gray, text_color = color.white)
+        table.cell(dashboard, 1, 0, "Value", bgcolor = color.gray, text_color = color.white)
+        table.cell(dashboard, 0, 1, "Position")
+        table.cell(dashboard, 1, 1, strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT")
+        table.cell(dashboard, 0, 2, "Trade workflow")
+        table.cell(dashboard, 1, 2, enableLongEntries and enableShortEntries ? "LONG + SHORT" : enableLongEntries ? "LONG ONLY" : enableShortEntries ? "SHORT ONLY" : "ENTRIES DISABLED")
+        table.cell(dashboard, 0, 3, "Daily P&L")
+        table.cell(dashboard, 1, 3, useDailyLossLimit ? str.tostring(monitoredDailyPnl, "#.00") : "DISABLED")
+        table.cell(dashboard, 0, 4, "Daily trade limit")
+        table.cell(dashboard, 1, 4, useDailyTradeLimit ? str.tostring(tradesToday) + " / " + str.tostring(maximumTradesPerDay) : "DISABLED")
+        table.cell(dashboard, 0, 5, "Risk budget")
+        table.cell(dashboard, 1, 5, str.tostring(effectiveRiskBudget, "#.00"))
+        table.cell(dashboard, 0, 6, "Risk/contract")
+        table.cell(dashboard, 1, 6, str.tostring(riskPerContract, "#.00"))
+        table.cell(dashboard, 0, 7, "Quantity")
+        table.cell(dashboard, 1, 7, str.tostring(calculatedContracts))
+        table.cell(dashboard, 0, 8, "Active scores")
+        table.cell(dashboard, 1, 8, enableLongEntries and enableShortEntries ? "L " + str.tostring(longScore) + " / S " + str.tostring(shortScore) : enableLongEntries ? "L " + str.tostring(longScore) : enableShortEntries ? "S " + str.tostring(shortScore) : "NONE")
+        table.cell(dashboard, 0, 9, "Stop / target ticks")
+        table.cell(dashboard, 1, 9, str.tostring(plannedStopTicks) + " / " + str.tostring(plannedTargetTicks))
+        table.cell(dashboard, 0, 10, "Active signal age")
+        table.cell(dashboard, 1, 10, enableLongEntries and enableShortEntries ? "L " + str.tostring(barsSinceLongSetup) + " / S " + str.tostring(barsSinceShortSetup) : enableLongEntries ? "L " + str.tostring(barsSinceLongSetup) : enableShortEntries ? "S " + str.tostring(barsSinceShortSetup) : "NONE")
+        table.cell(dashboard, 0, 11, "Daily loss capacity")
+        table.cell(dashboard, 1, 11, useDailyLossLimit ? str.tostring(remainingDailyLossCapacity, "#.00") : "DISABLED")
+        table.cell(dashboard, 0, 12, "Notional quantity cap")
+        table.cell(dashboard, 1, 12, useNotionalExposureLimit ? str.tostring(notionalBasedContracts) : "DISABLED")
+        table.cell(dashboard, 0, 13, "Drawdown lock")
+        table.cell(dashboard, 1, 13, useMaximumDrawdownLimit ? str.tostring(strategyDrawdownPercent, "#.00") + "% / " + (maximumDrawdownLocked ? "LOCKED" : "OPEN") : "DISABLED", text_color = useMaximumDrawdownLimit and maximumDrawdownLocked ? color.red : useMaximumDrawdownLimit ? color.green : color.gray)
+        table.cell(dashboard, 0, 14, "Tick / point / tick value")
+        table.cell(dashboard, 1, 14, str.tostring(syminfo.mintick) + " / " + str.tostring(syminfo.pointvalue) + " / " + str.tostring(syminfo.mintick * syminfo.pointvalue, "#.########"))
+        table.cell(dashboard, 0, 15, "Long entry status")
+        table.cell(dashboard, 1, 15, longEntryBlocker, text_color = longEntryBlocker == "READY" ? color.green : longEntryBlocker == "DISABLED" ? color.gray : color.orange)
+        table.cell(dashboard, 0, 16, "Short entry status")
+        table.cell(dashboard, 1, 16, shortEntryBlocker, text_color = shortEntryBlocker == "READY" ? color.green : shortEntryBlocker == "DISABLED" ? color.gray : color.orange)
+    else
+        table.clear(dashboard, 0, 0, 1, 16)

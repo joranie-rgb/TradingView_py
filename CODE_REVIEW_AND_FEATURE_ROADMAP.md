@@ -148,7 +148,9 @@ acknowledgements and fills.
 **Value:** High for automation; medium for manual use.  
 **Behavioral risk:** Low if event timing is unchanged.  
 **Validation cost:** Medium.  
-**Recommendation:** Implement after blocker diagnostics and publish the schema.
+**Status:** Completed in V7.5. All alert paths emit schema `1.0.0` JSON and the
+field/event semantics and external receiver obligations are published in
+`ALERT_SCHEMA.md`. Confirmed-bar event conditions and frequency are unchanged.
 
 #### 6.3 Research telemetry
 

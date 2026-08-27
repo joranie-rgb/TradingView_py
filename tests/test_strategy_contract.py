@@ -11,7 +11,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = (ROOT / "futures_v7_4.pine").read_text(encoding="utf-8")
+SOURCE = (ROOT / "futures_v7_5.pine").read_text(encoding="utf-8")
 
 
 class StrategyContractTests(unittest.TestCase):
@@ -87,15 +87,46 @@ class StrategyContractTests(unittest.TestCase):
             "MAXIMUM_DRAWDOWN_EXIT",
             "SESSION_EXIT",
         ):
-            self.assertIn(f'alert("{event}"', SOURCE)
-        for fill_event in (
-            "LONG_ENTRY",
-            "SHORT_ENTRY",
-            "DAILY_LOSS_EXIT",
-            "MAXIMUM_DRAWDOWN_EXIT",
-            "SESSION_EXIT",
+            self.assertIn(f'alertPayload("{event}"', SOURCE)
+
+    def test_alert_payload_is_structured_and_versioned(self) -> None:
+        for field in (
+            "schema_version",
+            "strategy_version",
+            "event_id",
+            "event",
+            "symbol",
+            "exchange",
+            "timeframe",
+            "signal_timestamp",
+            "expiration_timestamp",
+            "action",
+            "direction",
+            "quantity",
+            "planned_bracket_ticks",
+            "risk_day_id",
+            "administrative_reason",
         ):
-            self.assertIn(f'alert_message = "{fill_event}"', SOURCE)
+            self.assertIn(f'\\"{field}\\"', SOURCE)
+        self.assertIn('\\"schema_version\\":\\"1.0.0\\"', SOURCE)
+        self.assertIn('\\"strategy_version\\":\\"7.5\\"', SOURCE)
+        self.assertTrue((ROOT / "ALERT_SCHEMA.md").is_file())
+
+    def test_entry_event_ids_are_unique_per_submission_and_shared_by_alerts(self) -> None:
+        self.assertIn(
+            'str.tostring(submissionTimestamp) + ":" + eventName', SOURCE
+        )
+        for direction in ("long", "short"):
+            payload_name = f"{direction}EntryPayload"
+            self.assertIn(
+                f'strategy.entry("{direction.title()}", strategy.{direction}, '
+                f'qty = calculatedContracts, comment = "{direction.title()} Entry", '
+                f'alert_message = {payload_name})',
+                SOURCE,
+            )
+            self.assertIn(
+                f"alert({payload_name}, alert.freq_once_per_bar_close)", SOURCE
+            )
 
     def test_protective_fills_expose_direction_and_outcome(self) -> None:
         exits = re.findall(r'strategy\.exit\("(?:Long|Short) Exit"[^\n]+', SOURCE)
@@ -104,8 +135,12 @@ class StrategyContractTests(unittest.TestCase):
             direction_exits = [call for call in exits if f'"{direction.title()} Exit"' in call]
             self.assertGreaterEqual(len(direction_exits), 2)
             for exit_call in direction_exits:
-                self.assertIn(f'alert_profit = "{direction}_TARGET_EXIT"', exit_call)
-                self.assertIn(f'alert_loss = "{direction}_STOP_EXIT"', exit_call)
+                self.assertIn(
+                    f'alert_profit = alertPayload("{direction}_TARGET_EXIT"', exit_call
+                )
+                self.assertIn(
+                    f'alert_loss = alertPayload("{direction}_STOP_EXIT"', exit_call
+                )
 
     def test_coincident_administrative_exits_submit_one_close(self) -> None:
         self.assertIn(

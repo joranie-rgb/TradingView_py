@@ -1,8 +1,8 @@
-# Futures V7.4 — End-User Guide
+# Futures V7.5 — End-User Guide
 
 ## 1. What this strategy is
 
-`futures_v7_4.pine` is a TradingView Pine Script v6 **strategy** for testing
+`futures_v7_5.pine` is a TradingView Pine Script v6 **strategy** for testing
 directional futures entries. It combines EMA trend structure, MACD momentum, RSI
 bounds, ATR volatility, and optional relative volume. It also models contract
 sizing, brackets, daily limits, session exits, and a strategy-wide drawdown lock.
@@ -30,7 +30,7 @@ session filter changing from false to true could incorrectly look like a new
 technical setup. Conversely, a genuine technical transition could be rejected
 forever because a temporary execution gate was closed on that exact bar.
 
-V7.4 uses a staged pipeline:
+V7.5 uses a staged pipeline:
 
 1. calculate the technical scores;
 2. identify a directional technical transition;
@@ -48,20 +48,20 @@ gating; it does not authorize entries after the technical premise disappears.
 
 Even with closing-tick processing, an absolute stop calculated around the signal
 close can differ from its intended distance when modeled slippage changes the
-fill. V7.4 stores the confirmed ATR distance in ticks and supplies it to
+fill. V7.5 stores the confirmed ATR distance in ticks and supplies it to
 `strategy.exit` as relative `loss` and `profit` values. The displayed stop and
 target are calculated only after the emulator reports the actual average fill.
 
 ### Minimum-size overrides could undermine safety limits
 
-V7.4 distinguishes the optional account-risk override from hard limits. Turning
+V7.5 distinguishes the optional account-risk override from hard limits. Turning
 off `Skip Trade When Minimum Size Exceeds Risk` can permit the configured minimum
 quantity to exceed the normal per-trade percentage budget. It **cannot** bypass
 the enabled remaining-daily-loss-capacity limit or notional-exposure limit.
 
 ### Session settings require compatible chart bars
 
-A narrow session window works only if a chart bar opens inside it. V7.4 therefore
+A narrow session window works only if a chart bar opens inside it. V7.5 therefore
 adds an enabled-by-default local-time cutoff fallback that triggers on the first
 confirmed bar at or after the cutoff. It also rejects synthetic charts,
 non-time-based charts, non-intraday charts, and timeframes above a configured
@@ -71,7 +71,7 @@ maximum. No bar-based strategy can act while the market produces no bar.
 
 1. Open TradingView and select the intended futures symbol.
 2. Open **Pine Editor**.
-3. Copy the complete contents of `futures_v7_4.pine` into a new script.
+3. Copy the complete contents of `futures_v7_5.pine` into a new script.
 4. Save it, then select **Add to chart**.
 5. Resolve every compiler or runtime error before using Strategy Tester results.
 6. Open **Strategy Tester → Properties** and confirm the initial capital,
@@ -371,12 +371,16 @@ stop/target ticks clear after the strategy observes the position close.
     calls as required. Treat all alert payloads as untrusted, authenticate the
     receiver, reject duplicates/stale timestamps, enforce session and quantity
     limits again, and reconcile broker acknowledgements and fills outside this
-    script. Entry messages are `LONG_ENTRY` and `SHORT_ENTRY`; protective fills
-    are `LONG_STOP_EXIT`, `LONG_TARGET_EXIT`, `SHORT_STOP_EXIT`, and
-    `SHORT_TARGET_EXIT`;
+    script. All messages use the documented [JSON schema](ALERT_SCHEMA.md),
+    including a deterministic event ID, signal freshness timestamps, requested
+    quantity, bracket ticks, and risk-day identifier. Entry events are
+    `LONG_ENTRY` and `SHORT_ENTRY`; protective fills are `LONG_STOP_EXIT`,
+    `LONG_TARGET_EXIT`, `SHORT_STOP_EXIT`, and `SHORT_TARGET_EXIT`;
     administrative fills and `alert()` events identify `DAILY_LOSS_EXIT`,
-    `MAXIMUM_DRAWDOWN_EXIT`, or `SESSION_EXIT`. When controls coincide, only the
-    prioritized administrative reason is emitted.
+    `MAXIMUM_DRAWDOWN_EXIT`, or `SESSION_EXIT` and include a reason. When controls
+    coincide, only the prioritized administrative reason is emitted. Configure
+    order-fill alerts with `{{strategy.order.alert_message}}`; if `alert()` calls
+    are also enabled, deduplicate the intentionally matching logical event IDs.
 
 ## 7. Troubleshooting
 
@@ -418,7 +422,7 @@ bars. A “bar” is not a fixed unit of elapsed time across timeframes.
 
 ## 8. Pre-use checklist
 
-- [ ] Pine Editor compiles the unmodified V7.4 source.
+- [ ] Pine Editor compiles the unmodified V7.5 source.
 - [ ] Chart is standard, time-based, intraday, and within the maximum timeframe.
 - [ ] Exact contract or continuous-contract methodology is documented.
 - [ ] Tick size and point value match the exchange contract specification.

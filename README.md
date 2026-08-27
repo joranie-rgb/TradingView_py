@@ -1,4 +1,4 @@
-# TradingView Futures Strategy V7.4
+# TradingView Futures Strategy V7.5
 
 This repository contains a TradingView Pine Script v6 strategy for researching
 directional futures entries. It combines EMA, MACD, RSI, ATR, and optional
@@ -9,7 +9,8 @@ controls, session management, and a permanent peak-equity drawdown lock.
 
 | File | Purpose |
 | --- | --- |
-| [`futures_v7_4.pine`](futures_v7_4.pine) | Authoritative executable strategy source. |
+| [`futures_v7_5.pine`](futures_v7_5.pine) | Authoritative executable strategy source. |
+| [`ALERT_SCHEMA.md`](ALERT_SCHEMA.md) | Versioned JSON alert contract, event semantics, and receiver obligations. |
 | [`USER_GUIDE.md`](USER_GUIDE.md) | Installation, complete input reference, formulas, operating workflow, and troubleshooting. |
 | [`STRATEGY_REVIEW.md`](STRATEGY_REVIEW.md) | Code-review findings, execution semantics, safety boundaries, and residual risks. |
 | [`CODE_REVIEW_AND_FEATURE_ROADMAP.md`](CODE_REVIEW_AND_FEATURE_ROADMAP.md) | Current feature assessment and prioritized roadmap for future releases. |
@@ -48,10 +49,11 @@ round-trip commission synchronized with the actual commission model.
 
 This is research and execution-modeling code, not financial advice, an alert
 receiver, broker integration, or broker-side risk system. The strategy emits
-named order-fill messages and `alert()` events for an independently secured
-TradingView alert. Daily-loss, drawdown, and session exits are immediate
-closing-tick market requests generated after a qualifying bar is confirmed; they
-are not intrabar stop orders or guarantees of the fill price.
+versioned JSON order-fill messages and `alert()` events for an independently
+secured TradingView alert. Daily-loss, drawdown, and session exits are immediate
+closing-tick market requests generated after a qualifying bar is confirmed. See
+the [published payload schema](ALERT_SCHEMA.md). These requests are not intrabar
+stop orders or guarantees of the fill price.
 
 ## Local validation
 
