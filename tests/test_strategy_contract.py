@@ -164,6 +164,37 @@ class StrategyContractTests(unittest.TestCase):
         ):
             self.assertIn(label, SOURCE)
 
+    def test_dashboard_explains_directional_entry_blockers(self) -> None:
+        self.assertIn(
+            "string longEntryBlocker = entryBlocker(enableLongEntries, "
+            "longTechnicalSetup, longSignalActive)",
+            SOURCE,
+        )
+        self.assertIn(
+            "string shortEntryBlocker = entryBlocker(enableShortEntries, "
+            "shortTechnicalSetup, shortSignalActive)",
+            SOURCE,
+        )
+        for state in (
+            "NO TECHNICAL SETUP",
+            "SIGNAL EXPIRED",
+            "OUTSIDE ENTRY SESSION",
+            "OUTSIDE BACKTEST RANGE",
+            "ATR FILTER",
+            "VOLUME FILTER",
+            "COOLDOWN",
+            "DAILY TRADE LIMIT",
+            "DAILY LOSS LOCK",
+            "DRAWDOWN LOCK",
+            "DAILY CAPACITY",
+            "NOTIONAL CAP",
+            "MINIMUM SIZE",
+            "READY",
+        ):
+            self.assertIn(f'"{state}"', SOURCE)
+        self.assertIn('table.cell(dashboard, 0, 15, "Long entry status")', SOURCE)
+        self.assertIn('table.cell(dashboard, 0, 16, "Short entry status")', SOURCE)
+
     def test_dashboard_preserves_daily_loss_monitoring_without_sizing_cap(self) -> None:
         self.assertIn('table.cell(dashboard, 0, 3, "Daily P&L")', SOURCE)
         self.assertIn(

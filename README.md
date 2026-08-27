@@ -12,6 +12,7 @@ controls, session management, and a permanent peak-equity drawdown lock.
 | [`futures_v7_4.pine`](futures_v7_4.pine) | Authoritative executable strategy source. |
 | [`USER_GUIDE.md`](USER_GUIDE.md) | Installation, complete input reference, formulas, operating workflow, and troubleshooting. |
 | [`STRATEGY_REVIEW.md`](STRATEGY_REVIEW.md) | Code-review findings, execution semantics, safety boundaries, and residual risks. |
+| [`CODE_REVIEW_AND_FEATURE_ROADMAP.md`](CODE_REVIEW_AND_FEATURE_ROADMAP.md) | Current feature assessment and prioritized roadmap for future releases. |
 | [`tests/test_strategy_contract.py`](tests/test_strategy_contract.py) | Local static regression checks for safety-critical source invariants. |
 
 If prose and behavior ever differ, the Pine source and TradingView's compiler
