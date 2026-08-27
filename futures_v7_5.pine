@@ -148,8 +148,8 @@ jsonIntOrNull(int value) =>
 jsonNumberOrNull(float value) =>
     na(value) ? "null" : str.tostring(value)
 
-alertPayload(string eventName, string action, string direction, float quantity, int bracketStopTicks, int bracketTargetTicks, int signalTimestamp, int expirationTimestamp, string administrativeReason) =>
-    string eventIdentifier = syminfo.tickerid + ":" + timeframe.period + ":" + str.tostring(signalTimestamp) + ":" + eventName
+alertPayload(string eventName, string action, string direction, float quantity, int bracketStopTicks, int bracketTargetTicks, int signalTimestamp, int submissionTimestamp, int expirationTimestamp, string administrativeReason) =>
+    string eventIdentifier = syminfo.tickerid + ":" + timeframe.period + ":" + str.tostring(submissionTimestamp) + ":" + eventName
     "{" +
       "\"schema_version\":\"1.0.0\"," +
       "\"strategy_version\":\"7.5\"," +
@@ -303,9 +303,9 @@ var float activeStopPrice = na
 var float activeTargetPrice = na
 
 bool administrativeExitRequested = administrativeExitReason != 0
-string maximumDrawdownPayload = alertPayload("MAXIMUM_DRAWDOWN_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, "MAXIMUM_DRAWDOWN")
-string dailyLossPayload = alertPayload("DAILY_LOSS_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, "DAILY_LOSS_LIMIT")
-string sessionExitPayload = alertPayload("SESSION_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, "SESSION_CUTOFF")
+string maximumDrawdownPayload = alertPayload("MAXIMUM_DRAWDOWN_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, time_close, "MAXIMUM_DRAWDOWN")
+string dailyLossPayload = alertPayload("DAILY_LOSS_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, time_close, "DAILY_LOSS_LIMIT")
+string sessionExitPayload = alertPayload("SESSION_EXIT", "EXIT", strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, time_close, "SESSION_CUTOFF")
 // A flat strategy can still have an unfilled order. Remember when the session
 // guard cancels it so its frozen plan can be cleared below.
 bool pendingEntryCancelledAtSessionExit = sessionExitRequired and cancelOrdersAtSessionExit and strategy.position_size == 0
@@ -382,11 +382,12 @@ if enterLong and not enterShort
     plannedDirection := 1
     int longSignalTimestamp = longSetupTimestamp
     int longExpirationTimestamp = time_close + int(chartTimeframeSeconds * 1000)
-    string longEntryPayload = alertPayload("LONG_ENTRY", "ENTER", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, longSignalTimestamp, longExpirationTimestamp, "")
+    string longEntryPayload = alertPayload("LONG_ENTRY", "ENTER", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, longSignalTimestamp, time_close, longExpirationTimestamp, "")
     strategy.entry("Long", strategy.long, qty = calculatedContracts, comment = "Long Entry", alert_message = longEntryPayload)
+    alert(longEntryPayload, alert.freq_once_per_bar_close)
     // loss/profit are tick distances from the actual fill, avoiding the V7.2
     // signal-close anchoring bug when slippage changes the modeled fill.
-    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop", alert_profit = alertPayload("LONG_TARGET_EXIT", "EXIT", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, na, ""), alert_loss = alertPayload("LONG_STOP_EXIT", "EXIT", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, na, ""))
+    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop", alert_profit = alertPayload("LONG_TARGET_EXIT", "EXIT", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""), alert_loss = alertPayload("LONG_STOP_EXIT", "EXIT", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""))
 
 if enterShort and not enterLong
     plannedStopTicks := stopTicks
@@ -394,9 +395,10 @@ if enterShort and not enterLong
     plannedDirection := -1
     int shortSignalTimestamp = shortSetupTimestamp
     int shortExpirationTimestamp = time_close + int(chartTimeframeSeconds * 1000)
-    string shortEntryPayload = alertPayload("SHORT_ENTRY", "ENTER", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, shortSignalTimestamp, shortExpirationTimestamp, "")
+    string shortEntryPayload = alertPayload("SHORT_ENTRY", "ENTER", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, shortSignalTimestamp, time_close, shortExpirationTimestamp, "")
     strategy.entry("Short", strategy.short, qty = calculatedContracts, comment = "Short Entry", alert_message = shortEntryPayload)
-    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop", alert_profit = alertPayload("SHORT_TARGET_EXIT", "EXIT", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, na, ""), alert_loss = alertPayload("SHORT_STOP_EXIT", "EXIT", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, na, ""))
+    alert(shortEntryPayload, alert.freq_once_per_bar_close)
+    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop", alert_profit = alertPayload("SHORT_TARGET_EXIT", "EXIT", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""), alert_loss = alertPayload("SHORT_STOP_EXIT", "EXIT", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""))
 
 if newPositionOpened and plannedDirection == 1
     activeStopPrice := math.round_to_mintick(strategy.position_avg_price - plannedStopTicks * syminfo.mintick)
@@ -406,9 +408,9 @@ if newPositionOpened and plannedDirection == -1
     activeTargetPrice := math.round_to_mintick(strategy.position_avg_price - plannedTargetTicks * syminfo.mintick)
 
 if strategy.position_size > 0 and plannedDirection == 1 and not administrativeExitRequested
-    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop", alert_profit = alertPayload("LONG_TARGET_EXIT", "EXIT", "LONG", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, na, ""), alert_loss = alertPayload("LONG_STOP_EXIT", "EXIT", "LONG", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, na, ""))
+    strategy.exit("Long Exit", "Long", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Long Target", comment_loss = "Long Stop", alert_profit = alertPayload("LONG_TARGET_EXIT", "EXIT", "LONG", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""), alert_loss = alertPayload("LONG_STOP_EXIT", "EXIT", "LONG", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""))
 if strategy.position_size < 0 and plannedDirection == -1 and not administrativeExitRequested
-    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop", alert_profit = alertPayload("SHORT_TARGET_EXIT", "EXIT", "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, na, ""), alert_loss = alertPayload("SHORT_STOP_EXIT", "EXIT", "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, na, ""))
+    strategy.exit("Short Exit", "Short", loss = plannedStopTicks, profit = plannedTargetTicks, comment_profit = "Short Target", comment_loss = "Short Stop", alert_profit = alertPayload("SHORT_TARGET_EXIT", "EXIT", "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""), alert_loss = alertPayload("SHORT_STOP_EXIT", "EXIT", "SHORT", math.abs(strategy.position_size), plannedStopTicks, plannedTargetTicks, time_close, time_close, na, ""))
 
 if positionJustClosed
     plannedStopTicks := na
@@ -424,10 +426,6 @@ plot(showRiskLevels and strategy.position_size != 0 ? activeTargetPrice : na, "F
 plotshape(showSignalMarkers and enterLong and not enterShort, "Long Signal", shape.labelup, location.belowbar, color.green, text = "LONG", textcolor = color.white)
 plotshape(showSignalMarkers and enterShort and not enterLong, "Short Signal", shape.labeldown, location.abovebar, color.red, text = "SHORT", textcolor = color.white)
 
-if enterLong and not enterShort
-    alert(alertPayload("LONG_ENTRY", "ENTER", "LONG", calculatedContracts, plannedStopTicks, plannedTargetTicks, longSetupTimestamp, time_close + int(chartTimeframeSeconds * 1000), ""), alert.freq_once_per_bar_close)
-if enterShort and not enterLong
-    alert(alertPayload("SHORT_ENTRY", "ENTER", "SHORT", calculatedContracts, plannedStopTicks, plannedTargetTicks, shortSetupTimestamp, time_close + int(chartTimeframeSeconds * 1000), ""), alert.freq_once_per_bar_close)
 if administrativeExitReason == 1
     alert(maximumDrawdownPayload, alert.freq_once_per_bar_close)
 if administrativeExitReason == 2

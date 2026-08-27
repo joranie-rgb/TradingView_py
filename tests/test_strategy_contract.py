@@ -112,6 +112,22 @@ class StrategyContractTests(unittest.TestCase):
         self.assertIn('\\"strategy_version\\":\\"7.5\\"', SOURCE)
         self.assertTrue((ROOT / "ALERT_SCHEMA.md").is_file())
 
+    def test_entry_event_ids_are_unique_per_submission_and_shared_by_alerts(self) -> None:
+        self.assertIn(
+            'str.tostring(submissionTimestamp) + ":" + eventName', SOURCE
+        )
+        for direction in ("long", "short"):
+            payload_name = f"{direction}EntryPayload"
+            self.assertIn(
+                f'strategy.entry("{direction.title()}", strategy.{direction}, '
+                f'qty = calculatedContracts, comment = "{direction.title()} Entry", '
+                f'alert_message = {payload_name})',
+                SOURCE,
+            )
+            self.assertIn(
+                f"alert({payload_name}, alert.freq_once_per_bar_close)", SOURCE
+            )
+
     def test_protective_fills_expose_direction_and_outcome(self) -> None:
         exits = re.findall(r'strategy\.exit\("(?:Long|Short) Exit"[^\n]+', SOURCE)
         self.assertGreaterEqual(len(exits), 4)

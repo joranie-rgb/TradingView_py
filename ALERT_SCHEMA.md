@@ -64,9 +64,11 @@ and schema version are independent.
 
 ## Field and event semantics
 
-- `event_id` is deterministic: TradingView ticker ID, timeframe, signal
-  timestamp, and event name joined with colons. Treat the same ID received from
-  `alert()` and an order-fill alert as the same logical event, not two orders.
+- `event_id` is deterministic: TradingView ticker ID, timeframe, submission
+  timestamp, and event name joined with colons. The submission timestamp makes
+  a re-entry from a still-valid technical setup a distinct logical event. Treat
+  the same ID received from `alert()` and an order-fill alert as the same logical
+  event, not two orders.
 - Entry `signal_timestamp` identifies the original technical setup bar, even when
   execution gates delay submission within the configured validity window. Its
   `expiration_timestamp` is one chart interval after the submission bar closes,
