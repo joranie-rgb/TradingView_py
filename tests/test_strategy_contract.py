@@ -112,6 +112,16 @@ class StrategyContractTests(unittest.TestCase):
         self.assertIn('\\"strategy_version\\":\\"7.5\\"', SOURCE)
         self.assertTrue((ROOT / "ALERT_SCHEMA.md").is_file())
 
+    def test_alert_payload_avoids_multiline_concatenation(self) -> None:
+        payload_function = SOURCE[
+            SOURCE.index("alertPayload(") : SOURCE.index("bool newRiskDay")
+        ]
+        self.assertIn('string payload = "{"', payload_function)
+        self.assertIn('payload := payload + "}"', payload_function)
+        self.assertFalse(
+            any(line.rstrip().endswith("+") for line in payload_function.splitlines())
+        )
+
     def test_entry_event_ids_are_unique_per_submission_and_shared_by_alerts(self) -> None:
         self.assertIn(
             'str.tostring(submissionTimestamp) + ":" + eventName', SOURCE
