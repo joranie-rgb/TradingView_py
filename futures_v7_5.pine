@@ -150,23 +150,24 @@ jsonNumberOrNull(float value) =>
 
 alertPayload(string eventName, string action, string direction, float quantity, int bracketStopTicks, int bracketTargetTicks, int signalTimestamp, int submissionTimestamp, int expirationTimestamp, string administrativeReason) =>
     string eventIdentifier = syminfo.tickerid + ":" + timeframe.period + ":" + str.tostring(submissionTimestamp) + ":" + eventName
-    "{" +
-      "\"schema_version\":\"1.0.0\"," +
-      "\"strategy_version\":\"7.5\"," +
-      "\"event_id\":\"" + eventIdentifier + "\"," +
-      "\"event\":\"" + eventName + "\"," +
-      "\"symbol\":\"" + syminfo.ticker + "\"," +
-      "\"exchange\":\"" + syminfo.prefix + "\"," +
-      "\"timeframe\":\"" + timeframe.period + "\"," +
-      "\"signal_timestamp\":" + jsonIntOrNull(signalTimestamp) + "," +
-      "\"expiration_timestamp\":" + jsonIntOrNull(expirationTimestamp) + "," +
-      "\"action\":\"" + action + "\"," +
-      "\"direction\":\"" + direction + "\"," +
-      "\"quantity\":" + jsonNumberOrNull(quantity) + "," +
-      "\"planned_bracket_ticks\":{\"stop\":" + jsonIntOrNull(bracketStopTicks) + ",\"target\":" + jsonIntOrNull(bracketTargetTicks) + "}," +
-      "\"risk_day_id\":" + jsonIntOrNull(currentRiskDay) + "," +
-      "\"administrative_reason\":" + (administrativeReason == "" ? "null" : "\"" + administrativeReason + "\"") +
-    "}"
+    string payload = "{"
+    payload := payload + "\"schema_version\":\"1.0.0\","
+    payload := payload + "\"strategy_version\":\"7.5\","
+    payload := payload + "\"event_id\":\"" + eventIdentifier + "\","
+    payload := payload + "\"event\":\"" + eventName + "\","
+    payload := payload + "\"symbol\":\"" + syminfo.ticker + "\","
+    payload := payload + "\"exchange\":\"" + syminfo.prefix + "\","
+    payload := payload + "\"timeframe\":\"" + timeframe.period + "\","
+    payload := payload + "\"signal_timestamp\":" + jsonIntOrNull(signalTimestamp) + ","
+    payload := payload + "\"expiration_timestamp\":" + jsonIntOrNull(expirationTimestamp) + ","
+    payload := payload + "\"action\":\"" + action + "\","
+    payload := payload + "\"direction\":\"" + direction + "\","
+    payload := payload + "\"quantity\":" + jsonNumberOrNull(quantity) + ","
+    payload := payload + "\"planned_bracket_ticks\":{\"stop\":" + jsonIntOrNull(bracketStopTicks) + ",\"target\":" + jsonIntOrNull(bracketTargetTicks) + "},"
+    payload := payload + "\"risk_day_id\":" + jsonIntOrNull(currentRiskDay) + ","
+    payload := payload + "\"administrative_reason\":" + (administrativeReason == "" ? "null" : "\"" + administrativeReason + "\"")
+    payload := payload + "}"
+    payload
 
 bool newRiskDay = not na(currentRiskDay[1]) and currentRiskDay != currentRiskDay[1]
 bool barOpensInsideEntrySession = not na(time(timeframe.period, entrySession, sessionTimezone))
