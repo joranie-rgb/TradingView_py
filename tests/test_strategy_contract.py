@@ -122,6 +122,34 @@ class StrategyContractTests(unittest.TestCase):
             any(line.rstrip().endswith("+") for line in payload_function.splitlines())
         )
 
+    def test_alert_payload_escapes_dynamic_json_strings(self) -> None:
+        helper = SOURCE[SOURCE.index("jsonString(") : SOURCE.index("alertPayload(")]
+        for expression, character in (
+            ('str.replace_all(value, "\\\\", "\\\\\\\\")', "backslashes"),
+            ('str.replace_all(escaped, "\\\"", "\\\\\\\"")', "double quotes"),
+            ('str.replace_all(escaped, "\\n", "\\\\n")', "newlines"),
+            ('str.replace_all(escaped, "\\r", "\\\\r")', "carriage returns"),
+            ('str.replace_all(escaped, "\\t", "\\\\t")', "tabs"),
+        ):
+            with self.subTest(character=character):
+                self.assertIn(expression, helper)
+
+        payload_function = SOURCE[
+            SOURCE.index("alertPayload(") : SOURCE.index("bool newRiskDay")
+        ]
+        for value in (
+            "eventIdentifier",
+            "eventName",
+            "syminfo.ticker",
+            "syminfo.prefix",
+            "timeframe.period",
+            "action",
+            "direction",
+            "administrativeReason",
+        ):
+            with self.subTest(value=value):
+                self.assertIn(f"jsonString({value})", payload_function)
+
     def test_entry_event_ids_are_unique_per_submission_and_shared_by_alerts(self) -> None:
         self.assertIn(
             'str.tostring(submissionTimestamp) + ":" + eventName', SOURCE

@@ -84,6 +84,8 @@ and schema version are independent.
   They can be `null` when no entry plan exists.
 - Timestamps and IDs describe strategy intent; they are not broker execution
   timestamps or broker order identifiers.
+- String fields are JSON-escaped by the strategy before serialization, including
+  symbol metadata supplied by TradingView.
 
 ## Receiver requirements
 
