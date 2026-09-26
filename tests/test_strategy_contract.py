@@ -153,8 +153,9 @@ class StrategyContractTests(unittest.TestCase):
                     payload_function,
                 )
                 self.assertIsNotNone(assignment)
-                self.assertTrue(
-                    assignment.group("value").startswith(f"jsonString({value})"),
+                self.assertEqual(
+                    assignment.group("value"),
+                    f'jsonString({value}) + ","',
                     f"{field} must be escaped at its JSON serialization site",
                 )
 
