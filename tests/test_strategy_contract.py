@@ -137,18 +137,33 @@ class StrategyContractTests(unittest.TestCase):
         payload_function = SOURCE[
             SOURCE.index("alertPayload(") : SOURCE.index("bool newRiskDay")
         ]
-        for value in (
-            "eventIdentifier",
-            "eventName",
-            "syminfo.ticker",
-            "syminfo.prefix",
-            "timeframe.period",
-            "action",
-            "direction",
-            "administrativeReason",
-        ):
-            with self.subTest(value=value):
-                self.assertIn(f"jsonString({value})", payload_function)
+        escaped_fields = {
+            "event_id": "eventIdentifier",
+            "event": "eventName",
+            "symbol": "syminfo.ticker",
+            "exchange": "syminfo.prefix",
+            "timeframe": "timeframe.period",
+            "action": "action",
+            "direction": "direction",
+        }
+        for field, value in escaped_fields.items():
+            with self.subTest(field=field):
+                assignment = re.search(
+                    rf'payload := payload \+ "\\"{field}\\":" \+ (?P<value>[^\n]+)',
+                    payload_function,
+                )
+                self.assertIsNotNone(assignment)
+                self.assertEqual(
+                    assignment.group("value"),
+                    f'jsonString({value}) + ","',
+                    f"{field} must be escaped at its JSON serialization site",
+                )
+
+        self.assertIn(
+            '(administrativeReason == "" ? "null" : '
+            "jsonString(administrativeReason))",
+            payload_function,
+        )
 
     def test_entry_event_ids_are_unique_per_submission_and_shared_by_alerts(self) -> None:
         self.assertIn(
