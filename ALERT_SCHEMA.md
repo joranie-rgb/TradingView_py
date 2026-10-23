@@ -1,29 +1,48 @@
-# Futures V7.5 alert payload schema
+# Futures V7.5.2 alert payload schema
 
-V7.5 emits JSON objects instead of bare event names from both `alert()` calls and
-order-fill alert fields. The schema version is `1.0.0`; changing a field's name,
+V7.5.2 emits JSON objects from both `alert()` calls and
+order-fill alert fields. The schema version is `2.0.0`; changing a field's name,
 type, required status, or meaning requires a new schema version. Strategy version
 and schema version are independent.
+
+## Migration from schema 1
+
+Schema 2 adds required `instance_id` and `configuration_id` fields and changes
+event identity. Update strict receivers to accept schema `2.0.0` and strategy
+`7.5.2` before recreating TradingView alerts. Do not mix old and new alert
+snapshots for the same deployment. Deduplicate the entire opaque `event_id`;
+do not parse it into a fixed number of colon-delimited fields.
+
+Set **Alert Instance ID** uniquely per account/deployment, and change it when
+changing Strategy Properties. Behavior inputs are automatically encoded into a
+canonical configuration token, so different input configurations get different
+IDs even when their instance labels match. The token is not a cryptographic hash
+or an authentication mechanism. Identical deployments sharing both the instance
+label and inputs intentionally share identities; do not reuse that namespace
+across accounts. Strategy Properties are not fully introspectable from Pine
+and therefore must be namespaced by the operator's instance label.
 
 ## JSON Schema
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/tradingview/futures-alert-1.0.0.schema.json",
+  "$id": "https://example.invalid/tradingview/futures-alert-2.0.0.schema.json",
   "title": "Futures strategy alert",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "strategy_version", "event_id", "event", "symbol",
+    "schema_version", "strategy_version", "event_id", "instance_id", "configuration_id", "event", "symbol",
     "exchange", "timeframe", "signal_timestamp", "expiration_timestamp",
     "action", "direction", "quantity", "planned_bracket_ticks",
     "risk_day_id", "administrative_reason"
   ],
   "properties": {
-    "schema_version": { "const": "1.0.0" },
-    "strategy_version": { "const": "7.5" },
+    "schema_version": { "const": "2.0.0" },
+    "strategy_version": { "const": "7.5.2" },
     "event_id": { "type": "string", "minLength": 1 },
+    "instance_id": { "type": "string", "minLength": 1 },
+    "configuration_id": { "type": "string", "minLength": 1 },
     "event": {
       "enum": [
         "LONG_ENTRY", "SHORT_ENTRY", "LONG_STOP_EXIT", "LONG_TARGET_EXIT",
@@ -64,8 +83,9 @@ and schema version are independent.
 
 ## Field and event semantics
 
-- `event_id` is deterministic: TradingView ticker ID, timeframe, submission
-  timestamp, and event name joined with colons. The submission timestamp makes
+- `event_id` is deterministic: strategy version, instance ID, canonical input
+  configuration, TradingView ticker ID, timeframe, submission timestamp, and
+  event name. The submission timestamp makes
   a re-entry from a still-valid technical setup a distinct logical event. Treat
   the same ID received from `alert()` and an order-fill alert as the same logical
   event, not two orders.

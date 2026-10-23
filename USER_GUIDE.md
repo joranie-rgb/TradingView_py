@@ -1,4 +1,4 @@
-# Futures V7.5 — End-User Guide
+# Futures V7.5.2 — End-User Guide
 
 ## 1. What this strategy is
 
@@ -30,7 +30,7 @@ session filter changing from false to true could incorrectly look like a new
 technical setup. Conversely, a genuine technical transition could be rejected
 forever because a temporary execution gate was closed on that exact bar.
 
-V7.5 uses a staged pipeline:
+V7.5.2 uses a staged pipeline:
 
 1. calculate the technical scores;
 2. identify a directional technical transition;
@@ -48,20 +48,20 @@ gating; it does not authorize entries after the technical premise disappears.
 
 Even with closing-tick processing, an absolute stop calculated around the signal
 close can differ from its intended distance when modeled slippage changes the
-fill. V7.5 stores the confirmed ATR distance in ticks and supplies it to
+fill. V7.5.2 stores the confirmed ATR distance in ticks and supplies it to
 `strategy.exit` as relative `loss` and `profit` values. The displayed stop and
 target are calculated only after the emulator reports the actual average fill.
 
 ### Minimum-size overrides could undermine safety limits
 
-V7.5 distinguishes the optional account-risk override from hard limits. Turning
+V7.5.2 distinguishes the optional account-risk override from hard limits. Turning
 off `Skip Trade When Minimum Size Exceeds Risk` can permit the configured minimum
 quantity to exceed the normal per-trade percentage budget. It **cannot** bypass
 the enabled remaining-daily-loss-capacity limit or notional-exposure limit.
 
 ### Session settings require compatible chart bars
 
-A narrow session window works only if a chart bar opens inside it. V7.5 therefore
+A narrow session window works only if a chart bar opens inside it. V7.5.2 therefore
 adds an enabled-by-default local-time cutoff fallback that triggers on the first
 confirmed bar at or after the cutoff. It also rejects synthetic charts,
 non-time-based charts, non-intraday charts, and timeframes above a configured
@@ -221,10 +221,12 @@ The main calculations are:
 stop ticks = ceil(ATR × stop multiple ÷ minimum tick)
 target ticks = ceil(stop ticks × reward/risk)
 price risk per contract = (stop ticks + buffer ticks)
-                          × minimum tick × point value
+                          × minimum tick × point value, converted to account currency
 risk per contract = price risk per contract + round-trip commission
 account quantity = floor(account risk budget ÷ risk per contract)
-notional per contract = close × point value
+notional per contract = convert to account currency(close × point value)
+margin per contract = converted buffered notional + round-trip commission reserve
+margin quantity = floor(max(equity, 0) ÷ margin per contract)
 ```
 
 Final quantity is the smallest enabled quantity cap, limited by
@@ -232,18 +234,33 @@ Final quantity is the smallest enabled quantity cap, limited by
 the displayed calculated quantity becomes zero and the order is rejected.
 
 Notional exposure is not exchange initial margin. At the default 100% cap, one
-contract fails when `close × point value` exceeds current equity. Change this only
+contract fails when converted `close × point value` exceeds current equity. Change this only
 under a documented leverage policy; it is distinct from the strategy's margin
-properties. ATR distance, quantity, and bracket ticks freeze at submission. A
+properties. A separate conservative 100% margin quantity cap is always applied,
+even when the notional policy is disabled or raised. It reserves the estimated
+round-trip commission and at least one tick of price buffer. Keep the sizing
+buffer at least as large as the Properties slippage setting and the commission
+estimate at least as large as actual round-trip costs. Lowering margin in
+Properties does not relax this conservative cap. Pine cannot inspect every
+Property override; larger unmodeled costs can still cause rejection. The panel
+reports **MARGIN CAP** and its quantity allowance.
+
+Price risk and notional are converted using `strategy.convert_to_account` before
+comparison to account budgets; missing conversion data blocks sizing. Commission
+estimates are already in account currency and are not converted again.
+
+ATR distance, quantity, and bracket ticks freeze at submission. A
 gap changes neither tick distance nor quantity, and buffer/commission inputs
 affect sizing without widening the bracket.
 
 ### 7. Daily Risk Controls
 
 - **Enable Daily Trade Limit** turns the filled-trade entry gate on or off.
-- **Maximum Filled Trades per Day** counts increases in TradingView's combined
-  open-plus-closed trade records. It counts observed fills, not submitted orders,
-  and is enforced only when **Enable Daily Trade Limit** is on.
+- **Maximum Filled Trades per Day** counts distinct observed entry timestamps,
+  attributed to their actual fill day. Partial exits do not count as new entries.
+  The latest closed record also detects a round trip that closes before the
+  script observes an open position. This relies on no pyramiding and close-only
+  entries. It is enforced only when **Enable Daily Trade Limit** is on.
 - **Enable Daily Loss Limit** turns daily-loss monitoring and its entry gate on
   or off. It also controls whether **Cap New Trade Risk at Remaining Daily Loss
   Capacity** can constrain sizing: when the daily-loss limit is off, that sizing
@@ -272,10 +289,16 @@ same bar, the script submits only one close request. Priority is maximum
 drawdown, then daily loss, then session. Session processing and configured
 flat-order cancellation still occur even when another close reason has priority.
 
-The calendar risk day changes at midnight in the configured timezone, but reset
-code runs on the first available chart bar in that new day. If the market is
-closed at midnight, the baseline is captured on that first bar. A threshold can
-be exceeded between confirmed-bar evaluations and a close need not fill at it.
+The risk-day identifier is explicit calendar midnight in the configured timezone,
+with no missing minute at 23:59. Reset code runs on the first available chart bar
+in the new day. Equity and realized-profit baselines carry the previous available
+bar's valuation, so first-bar losses and overnight gaps are counted rather than
+absorbed into the new baseline. This is not an independently sampled midnight
+valuation; a market-closure gap is included. A threshold can be exceeded between
+confirmed-bar evaluations and a close need not fill at it.
+
+Only a fully flat position clears the frozen plan and starts exit cooldown.
+Partial liquidations retain the residual position's plan and bracket refresh.
 
 The loss threshold records an internal flag for the risk day. When **Lock Trading
 for Rest of Risk Day** is enabled, that flag blocks entries and causes enabled
@@ -326,6 +349,12 @@ entry on that eligible closing tick, but a live alert consumer must enforce its
 own cutoff.
 
 ### 10. Display
+
+- **Alert Instance ID** must be nonblank and unique per account/deployment.
+  Change it after changing Strategy Properties. All behavior inputs also enter
+  the canonical configuration token. V7.5.2 uses schema **2.0.0** with required
+  `instance_id` and `configuration_id`; update receivers and recreate alerts.
+  See [migration and identity rules](ALERT_SCHEMA.md).
 
 - **Signal Markers** show bars where an entry order was submitted, not guaranteed
   fills.
@@ -399,7 +428,7 @@ re-check exit-window alignment.
 The plotted entry marker appears only when an order is submitted. If no marker is
 shown, inspect score, signal age, session, ATR/volume filters, cooldown, daily
 trade count, daily-loss lock, drawdown lock, effective risk budget, notional cap,
-and calculated quantity.
+calculated quantity, and the 100% margin quantity cap.
 
 ### Calculated quantity is zero
 
@@ -422,7 +451,7 @@ bars. A “bar” is not a fixed unit of elapsed time across timeframes.
 
 ## 8. Pre-use checklist
 
-- [ ] Pine Editor compiles the unmodified V7.5 source.
+- [ ] Pine Editor compiles the unmodified V7.5.2 source.
 - [ ] Chart is standard, time-based, intraday, and within the maximum timeframe.
 - [ ] Exact contract or continuous-contract methodology is documented.
 - [ ] Tick size and point value match the exchange contract specification.

@@ -1,4 +1,11 @@
-# Liquidity + Structure Monitor v1.0
+# Liquidity + Structure Monitor v1.1
+
+## Current maintenance release
+
+LSM v1.1 fixes opening-bar sweep suppression, two-sided penetration checks,
+target rounding, live cancellation diagnostics, and structure-line continuity.
+See [all 14 review fixes and validation limits](REVIEW_FIXES.md). Historical
+screenshot findings below refer to the original repository snapshot.
 
 ## Review scope, October 23, 2026
 
@@ -32,12 +39,9 @@ pixels. The new indicator does not reproduce those macro/evidence features.
    At $50K equity and the default 100% notional cap, the quantity cap floors to
    zero. Verify actual Strategy Properties and symbol metadata before attributing
    the empty report to a signal bug. The source also declares 100% margin.
-6. V7.5's session check tests whether session-generated opening and closing
-   timestamps exist. It does not compare the actual chart close to the generated
-   session close. A bar overlapping a partial session boundary can therefore
-   pass that check; a cutoff may independently block it. The new indicator
-   explicitly compares actual endpoints. Existing strategy files were left
-   unchanged because this request creates an indicator.
+6. The original V7.5 session check tested only whether session-generated opening
+   and closing timestamps existed. V7.5.2, V7.4.1, and this indicator explicitly
+   compare actual endpoints, excluding partial session-boundary bars.
 7. V7.5 can emit an entry `alert()` and an order-fill alert. Selecting both event
    types requires receiver deduplication. This indicator uses two selectable
    `alertcondition()` events and has no order-fill event stream.
@@ -64,7 +68,8 @@ strategy orders, account sizing, fill model, P&L, or position tracking.
    beyond the level; an additional crossover is not required.
 5. Cancel before signaling if price breaks the original sweep extreme, the setup
    exceeds 12 bars, the bar is outside the session, or the local calendar date
-   changes. A touch equal to the sweep extreme does not cancel. A bar that both
+   changes. Resetting a prior-date arm does not prevent the new date's first
+   candle from arming a fresh sweep. A touch equal to the sweep extreme does not cancel. A bar that both
    invalidates the extreme and breaks structure cannot confirm that old setup.
 6. Default trend context is the **previous completed 4h candle** and its 9/21
    EMAs. Bullish means close > fast > slow; bearish means close < fast < slow.
@@ -75,7 +80,8 @@ strategy orders, account sizing, fill model, P&L, or position tracking.
    by default. Missing volume blocks signals only if that filter is enabled.
 8. Reference stop is two ticks beyond the original sweep extreme, with a
    permitted distance of 0.5-3 ATR from the signal close. Target is 2R, rounded to
-   the symbol's tick size. These are frozen **reference prices**, not orders.
+   an integer number of ticks outward, with a minimum one-tick favorable
+   distance. These are frozen **reference prices**, not orders.
 
 The setup's age is measured in chart bars. Twelve 1m bars and twelve 1h bars
 represent different opportunities. A 1h chart computes its own 1h structure;
@@ -106,7 +112,10 @@ The panel's main state describes the current bar and its first relevant blocker.
 Its last-event row retains the latest sweep, cancellation, or signal; the last
 reference row retains the latest confirmed signal prices. These can refer to
 different events. Reference lines start on the next bar, expire after the
-configured display age, and have a gap between plans. They do not disappear on
+configured display age, and have a gap between plans. Armed structure levels use
+separate line objects for each setup; the most recent 100 are retained. The panel
+can show SESSION RESET, SWEEP EXTREME BROKEN, or SETUP EXPIRED during a forming
+candle before the confirmed-bar cancellation is committed. They do not disappear on
 target/stop touches, track exits, or prevent later signals. No account position
 is inferred. Reloads and input changes rebuild chart history; it is not an
 external archive.
@@ -124,11 +133,11 @@ and existing strategy contract tests cannot establish that the new indicator
 compiles or performs correctly in TradingView. No profit, win-rate, or improved
 return claim has been established. No settings were optimized against the image.
 
-Local verification completed: all 20 existing strategy contract checks passed
-using `python -m unittest discover -s tests -v` with the bundled Python runtime;
-`git diff --check` passed. These tests cover the unchanged V7.5 strategy, not the
-new indicator's signal engine. TradingView compilation and the Replay scenarios
-below remain outstanding.
+Local validation now includes source contract checks and numerical edge-case
+checks of pure decision expressions extracted from both strategies and the
+indicator. Run `python -B -m unittest discover -s tests -v`. This bounded test
+interpreter is not a Pine compiler or a complete state/order simulator.
+TradingView compilation, Replay, and realtime checks below remain required.
 
 Before relying on the indicator, compile it and use Bar Replay to check:
 
@@ -137,7 +146,7 @@ Before relying on the indicator, compile it and use Bar Replay to check:
 | Pivot right-hand bars incomplete | No eligible new pivot or backdated sweep marker. |
 | Wick through low and close above; opposite high still above close | Long setup armed; no same-bar signal. |
 | Sweep candle already closes through opposite structure | No setup armed from that sweep. |
-| One candle penetrates both pivots | Neither direction arms. |
+| One candle penetrates both pivots, including an already consumed opposite pivot | Neither direction arms. |
 | Later close breaks frozen structure with all gates met | One closing-bar L/S marker; arm consumed. |
 | Break occurs with mixed/opposing HTF trend | No signal; HTF blocker displayed if higher-priority gates pass. |
 | Gate later passes before expiry and close remains beyond break level | Signal can confirm without a second crossover. |
@@ -145,7 +154,10 @@ Before relying on the indicator, compile it and use Bar Replay to check:
 | Age exactly 12 / age 13 | Eligible / expired with default lifetime. |
 | Signal at bar N, cooldown=5 | Earliest later signal is N+6. |
 | Signal just before session end; next bar straddles end | No outside-session confirmation. |
-| Date rolls over without outside-session bars in dataset | Pending setup clears. |
+| Date rolls over without outside-session bars in dataset | Prior arm clears; a valid opening-bar sweep can arm anew. |
+| Small target R on a short setup | Target stays at least one favorable tick below signal close. |
+| Expired setup replaced on the same bar | Separate yellow lines without a connecting diagonal. |
+| Extreme is breached during a forming bar | Panel shows SWEEP EXTREME BROKEN before close. |
 | Reuse already swept pivot | No repeated arm until another pivot confirms. |
 | Missing volume with filter off / on | Ignore volume / block confirmation. |
 | Stop outside min/max ATR distance | Block confirmation and display reason. |

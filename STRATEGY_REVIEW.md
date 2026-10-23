@@ -1,10 +1,17 @@
-# Code Review of Futures Strategy V7.5
+# Code Review of Futures Strategy V7.5.2
 
 `futures_v7_5.pine` is the reviewed successor to V7.3. It uses confirmed chart
 bars, same-close market-order execution, and no higher-timeframe or future-data
 requests.
 For installation, input behavior, formulas, troubleshooting, and a pre-use
 checklist, see `USER_GUIDE.md`.
+
+## Current review fixes
+
+The current sources are V7.5.2 and compatibility V7.4.1. See
+[the 14-finding resolution matrix](REVIEW_FIXES.md) for the latest changes and
+hosted validation requirements. Earlier finding histories below describe their
+original review context. V7.5.2 alerts require schema 2.0.0 migration.
 
 ## Review scope and method
 
@@ -139,15 +146,17 @@ the full evaluation sample.
 
 ### Daily controls
 
-- A risk day is identified in the configured timezone, but reset code runs on
-  the first available chart bar belonging to the new calendar day. Across a
-  market closure at midnight, the baseline is the first available bar rather
-  than a synthetic midnight valuation.
+- A risk day uses an explicit local-midnight timestamp with no 23:59 session
+  hole. Reset runs on the first available bar in the new date and carries the
+  prior available equity/net-profit valuation. First-bar losses and closure gaps
+  count; this is not a synthetic midnight valuation.
 - Daily P&L is measured from that baseline. Realized mode uses the change in
   `strategy.netprofit`; marked-to-market mode uses the change in
   `strategy.equity`.
-- Filled-trade counting uses the increase in open-plus-closed trade records, not
-  submitted signals. It updates after the emulator exposes a fill.
+- Filled-entry counting deduplicates observed entry timestamps and attributes
+  them to their fill date. Partial exits neither add entries nor clear the plan;
+  cleanup requires a fully flat position. Closed records catch unobserved round
+  trips. The source has no pyramiding or intrabar entry recalculation.
 - Crossing the daily-loss threshold records internal `dailyLossLocked` for that
   risk day. With **Lock Trading for Rest of Risk Day** enabled, entry blocking
   and forced liquidation follow that latch. With it disabled, both behaviors
@@ -175,8 +184,11 @@ the full evaluation sample.
 ### Sizing and display
 
 - The account-risk override is optional; daily-capacity and notional caps remain
-  hard when enabled. The default 100% notional cap can reject one futures
-  contract when `close × syminfo.pointvalue` exceeds strategy equity.
+  hard when enabled. Risk and notional amounts are converted to account currency.
+  The default notional cap can reject a contract exceeding equity. A separate
+  conservative 100% margin cap reserves buffered notional and estimated costs,
+  regardless of a relaxed notional policy or lower UI margin. Higher Property
+  costs require matching sizing estimates; unknown overrides remain a limitation.
 - `effectiveRiskBudget` is a displayed summary. Quantity is computed by
   independently flooring account-risk and daily-capacity quantities and taking
   the smallest cap, which is conservative at integer boundaries.

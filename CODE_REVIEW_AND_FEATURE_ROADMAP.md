@@ -1,5 +1,9 @@
 # Code Review, Feature Assessment, and Recommended Roadmap
 
+Current maintenance release: **V7.5.2 / LSM v1.1**, with compatibility
+**V7.4.1**. The [review fix matrix](REVIEW_FIXES.md) records subsequent fixes;
+the roadmap's earlier review history is retained below.
+
 ## 1. Purpose and scope
 
 This document reviews the current `futures_v7_4.pine` strategy and proposes a
@@ -79,7 +83,9 @@ defects:
    loss.
 2. **Emulator-dependent order lifecycle.** Same-close entry, protective bracket,
    and administrative-exit ordering must be verified in TradingView.
-3. **First-bar daily reset.** The risk-day baseline is established on the first
+3. **Daily valuation sampling.** Current releases carry the previous available
+   valuation across a date reset so first-bar losses count. There is no separate
+   midnight valuation. Earlier releases established the baseline on the first
    available bar of a new calendar day, not at an independently evaluated
    midnight tick.
 4. **Symbol metadata is necessary but insufficient.** Valid tick and point values
@@ -148,7 +154,7 @@ acknowledgements and fills.
 **Value:** High for automation; medium for manual use.  
 **Behavioral risk:** Low if event timing is unchanged.  
 **Validation cost:** Medium.  
-**Status:** Completed in V7.5. All alert paths emit schema `1.0.0` JSON and the
+**Status:** Completed and revised in V7.5.2. All alert paths emit schema `2.0.0` JSON and the
 field/event semantics and external receiver obligations are published in
 `ALERT_SCHEMA.md`. Confirmed-bar event conditions and frequency are unchanged.
 
@@ -175,6 +181,10 @@ Visibility should come before making score weights configurable.
 ### Phase 2 — Validation and backtest integrity
 
 #### 6.4 Continuous integration
+
+**Status:** Added in the review-fix release. GitHub Actions runs source contracts
+and extracted decision/payload edge cases on Python 3.12 and 3.13. Pine
+compilation and broker-emulator checks remain hosted manual requirements.
 
 Add a CI workflow that runs:
 
