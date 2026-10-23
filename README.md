@@ -9,6 +9,9 @@ controls, session management, and a permanent peak-equity drawdown lock.
 
 | File | Purpose |
 | --- | --- |
+| [`liquidity_structure_v1.pine`](liquidity_structure_v1.pine) | Standalone sweep + structure indicator with confirmed HTF context, closing-bar alerts, and a compact status panel. Requires TradingView compilation/Replay validation. |
+| [`INDICATOR_REVIEW.md`](INDICATOR_REVIEW.md) | Screenshot/code review, new indicator rules, installation, and validation scenarios. |
+| [`Liquidity_Structure_Monitor_User_Guide.docx`](Liquidity_Structure_Monitor_User_Guide.docx) | Word end-user guide for installing, configuring, and using LSM v1.0, including alerts and troubleshooting. |
 | [`futures_v7_5.pine`](futures_v7_5.pine) | Authoritative executable strategy source. |
 | [`ALERT_SCHEMA.md`](ALERT_SCHEMA.md) | Versioned JSON alert contract, event semantics, and receiver obligations. |
 | [`USER_GUIDE.md`](USER_GUIDE.md) | Installation, complete input reference, formulas, operating workflow, and troubleshooting. |
