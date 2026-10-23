@@ -1,5 +1,5 @@
 //@version=6
-indicator("Liquidity + Structure Monitor v1.0", shorttitle = "LSM v1.0", overlay = true)
+indicator("Liquidity + Structure Monitor v1.1", shorttitle = "LSM v1.1", overlay = true, max_lines_count = 100)
 
 // Signal research only. No orders, fills, position accounting, or macro feed.
 // Pivots become eligible on their confirmation bar; markers are never backdated.
@@ -43,6 +43,19 @@ bool showPanel = input.bool(true, "Show compact panel", group = G_VIEW)
 string panelCorner = input.string("Top right", "Panel position", options = ["Top right", "Bottom right", "Top left", "Bottom left"], group = G_VIEW)
 string panelSize = input.string("Small", "Panel text", options = ["Small", "Normal", "Large"], group = G_VIEW)
 
+// Pure decisions are exercised by tests against these source expressions.
+penetratedLevel(float extreme, float pivot, int direction, float distance) =>
+    not na(pivot) and direction * (extreme - pivot) >= distance
+
+targetDistanceTicks(float risk, float multiple, float tickSize) =>
+    math.max(1, int(math.ceil(risk * multiple / tickSize)))
+
+setupInvalidated(int direction, float lowest, float highest, float extreme) =>
+    direction == 1 ? lowest < extreme : direction == -1 and highest > extreme
+
+setupCancellation(bool sessionOk, bool dateReset, bool invalid, bool overAge) =>
+    not sessionOk or dateReset ? "SESSION RESET" : invalid ? "SWEEP EXTREME BROKEN" : overAge ? "SETUP EXPIRED" : ""
+
 if barstate.isfirst
     if fastLength >= slowLength
         runtime.error("Fast EMA must be shorter than slow EMA.")
@@ -83,7 +96,6 @@ bool inSession = not useSession or (not na(sessionOpen) and not na(sessionClose)
 // Reset on the local calendar day as well as outside-session bars, including
 // charts that omit overnight data. Overnight sessions therefore reset at midnight.
 int dateKey = year(time, zone) * 10000 + month(time, zone) * 100 + dayofmonth(time, zone)
-bool newDay = not na(dateKey[1]) and dateKey != dateKey[1]
 float ph = ta.pivothigh(high, pivotBars, pivotBars)
 float pl = ta.pivotlow(low, pivotBars, pivotBars)
 var float swingHigh = na
@@ -92,8 +104,12 @@ var bool highUsed = false
 var bool lowUsed = false
 var int armedDirection = 0
 var int armedBar = na
+var int armedDate = na
 var float breakLevel = na
 var float sweepExtreme = na
+// Separate drawing objects cannot join unrelated frozen levels on a replacement
+// bar. TradingView retains the most recent 100 setup lines.
+var line armedLine = na
 var int lastSignalBar = na
 var string lastEvent = "No signal yet"
 var float referenceEntry = na
@@ -113,53 +129,68 @@ float candidateStop = armedDirection == 1 ? math.round_to_mintick(sweepExtreme -
 float candidateRisk = armedDirection == 1 ? close - candidateStop : candidateStop - close
 bool riskOk = ready and candidateRisk >= atr * minStopAtr and candidateRisk <= atr * maxStopAtr
 bool structureBroken = armedDirection == 1 ? close >= breakLevel + breakTicks * tick : armedDirection == -1 and close <= breakLevel - breakTicks * tick
-bool invalidated = armedDirection == 1 ? low < sweepExtreme : armedDirection == -1 and high > sweepExtreme
+bool invalidated = setupInvalidated(armedDirection, low, high, sweepExtreme)
 bool expired = armedDirection != 0 and bar_index - armedBar > validityBars
+string pendingCancellation = setupCancellation(inSession, armedDirection != 0 and dateKey != armedDate, invalidated, expired)
 
 // Values above describe the setup entering this bar. A sweep armed below can
 // only signal on a later bar; this avoids guessing sweep/BOS intrabar ordering.
 if barstate.isconfirmed
-    if armedDirection != 0 and (not inSession or newDay or invalidated or expired)
-        lastEvent := expired ? "Setup expired" : invalidated ? "Sweep extreme broken" : "Session reset"
+    if not na(armedLine)
+        line.set_x2(armedLine, bar_index)
+    if armedDirection != 0 and pendingCancellation != ""
+        lastEvent := pendingCancellation
         armedDirection := 0
         armedBar := na
+        armedDate := na
         breakLevel := na
         sweepExtreme := na
+        armedLine := na
     if armedDirection != 0 and bar_index > armedBar and ready and inSession and cooldownOk and structureBroken and localOk and contextOk and volumeOk and bodyOk and extensionOk and riskOk
         longSignal := armedDirection == 1
         shortSignal := armedDirection == -1
         referenceEntry := close
         referenceStop := candidateStop
-        referenceTarget := math.round_to_mintick(close + armedDirection * candidateRisk * targetR)
+        referenceTarget := math.round_to_mintick(close + armedDirection * targetDistanceTicks(candidateRisk, targetR, tick) * tick)
         lastSignalBar := bar_index
         lastEvent := (longSignal ? "LONG " : "SHORT ") + str.format_time(time_close, "MM-dd HH:mm", zone)
         armedDirection := 0
         armedBar := na
+        armedDate := na
         breakLevel := na
         sweepExtreme := na
+        armedLine := na
 
     // Consume a swept pivot even when no setup can be armed. It cannot keep
     // producing new setups until a new pivot is confirmed. Old pivots penetrated
     // on previous closes also become unavailable as fresh liquidity references.
-    bool tookLow = not na(swingLow) and not lowUsed and low <= swingLow - sweepTicks * tick
-    bool tookHigh = not na(swingHigh) and not highUsed and high >= swingHigh + sweepTicks * tick
+    // Physical penetration is independent of whether the pivot was consumed.
+    bool piercedLow = penetratedLevel(low, swingLow, -1, sweepTicks * tick)
+    bool piercedHigh = penetratedLevel(high, swingHigh, 1, sweepTicks * tick)
+    bool tookLow = not lowUsed and piercedLow
+    bool tookHigh = not highUsed and piercedHigh
     bool bullSweep = tookLow and close > swingLow
     bool bearSweep = tookHigh and close < swingHigh
-    if armedDirection == 0 and not longSignal and not shortSignal and ready and inSession and not newDay
-        if allowLong and bullSweep and not tookHigh and not na(swingHigh) and swingHigh > close
+    // Resetting the previous date's arm does not suppress today's first sweep.
+    if armedDirection == 0 and not longSignal and not shortSignal and ready and inSession
+        if allowLong and bullSweep and not piercedHigh and not na(swingHigh) and swingHigh > close
             armedDirection := 1
             armedBar := bar_index
+            armedDate := dateKey
             breakLevel := swingHigh
             sweepExtreme := low
             armedLongNow := true
             lastEvent := "Low swept; waiting BOS"
-        else if allowShort and bearSweep and not tookLow and not na(swingLow) and swingLow < close
+        else if allowShort and bearSweep and not piercedLow and not na(swingLow) and swingLow < close
             armedDirection := -1
             armedBar := bar_index
+            armedDate := dateKey
             breakLevel := swingLow
             sweepExtreme := high
             armedShortNow := true
             lastEvent := "High swept; waiting BOS"
+    if armedLongNow or armedShortNow
+        armedLine := line.new(bar_index, breakLevel, bar_index + 1, breakLevel, color = color.yellow, width = 2)
     if tookLow or (not na(swingLow) and close < swingLow)
         lowUsed := true
     if tookHigh or (not na(swingHigh) and close > swingHigh)
@@ -178,6 +209,9 @@ float displayRisk = armedDirection == 1 ? close - (sweepExtreme - stopBufferTick
 bool displayBreak = armedDirection == 1 ? close >= breakLevel + breakTicks * tick : armedDirection == -1 and close <= breakLevel - breakTicks * tick
 bool displayLocal = not useLocalTrend or (armedDirection == 1 ? fast > slow and close > fast : fast < slow and close < fast)
 bool displayBody = ready and math.abs(close - open) >= atr * minBodyAtr and (armedDirection == 1 ? close > open : close < open)
+// Recompute after cancellation/rearming: incoming snapshots may describe an old
+// setup. The panel can warn immediately while signals remain close-confirmed.
+string displayCancellation = armedDirection == 0 ? "" : setupCancellation(inSession, dateKey != armedDate, setupInvalidated(armedDirection, low, high, sweepExtreme), bar_index - armedBar > validityBars)
 string state = "WAIT FOR SWEEP"
 if not ready
     state := "WARMING UP"
@@ -188,7 +222,7 @@ else if not allowLong and not allowShort
 else if longSignal or shortSignal
     state := longSignal ? "LONG CONFIRMED" : "SHORT CONFIRMED"
 else if armedDirection != 0
-    state := not displayBreak ? "WAIT FOR STRUCTURE BREAK" : useHtf and contextDirection != armedDirection ? "HTF TREND BLOCK" : not displayLocal ? "CHART TREND BLOCK" : not volumeOk ? "VOLUME BLOCK" : not displayBody ? "CANDLE BODY BLOCK" : not extensionOk ? "OVEREXTENDED" : displayRisk < atr * minStopAtr or displayRisk > atr * maxStopAtr ? "STOP DISTANCE BLOCK" : not cooldownOk ? "COOLDOWN" : "WAIT FOR BAR CLOSE"
+    state := displayCancellation != "" ? displayCancellation : not displayBreak ? "WAIT FOR STRUCTURE BREAK" : useHtf and contextDirection != armedDirection ? "HTF TREND BLOCK" : not displayLocal ? "CHART TREND BLOCK" : not volumeOk ? "VOLUME BLOCK" : not displayBody ? "CANDLE BODY BLOCK" : not extensionOk ? "OVEREXTENDED" : displayRisk < atr * minStopAtr or displayRisk > atr * maxStopAtr ? "STOP DISTANCE BLOCK" : not cooldownOk ? "COOLDOWN" : "WAIT FOR BAR CLOSE"
 else if not cooldownOk
     state := "COOLDOWN / WAIT FOR SWEEP"
 
@@ -196,7 +230,6 @@ plot(showEmas ? fast : na, "Fast EMA", color.rgb(65, 135, 255), 2)
 plot(showEmas ? slow : na, "Slow EMA", color.orange, 2)
 plot(showPivots ? swingHigh : na, "Confirmed swing high", color.new(color.red, 55), 1, plot.style_stepline)
 plot(showPivots ? swingLow : na, "Confirmed swing low", color.new(color.aqua, 55), 1, plot.style_stepline)
-plot(armedDirection != 0 ? breakLevel : na, "Armed structure level", color.yellow, 2, plot.style_linebr)
 bool planVisible = showPlan and not na(lastSignalBar) and bar_index - lastSignalBar <= planBars
 // Break the line on each new signal to avoid connecting unrelated plans.
 plot(planVisible and not longSignal and not shortSignal ? referenceEntry : na, "Signal close reference", color.gray, 1, plot.style_linebr)
@@ -210,8 +243,8 @@ plotshape(shortSignal, "Short confirmed", shape.labeldown, location.abovebar, co
 plot(referenceEntry, "Latest signal close", display = display.data_window)
 plot(referenceStop, "Latest reference stop", display = display.data_window)
 plot(referenceTarget, "Latest reference target", display = display.data_window)
-alertcondition(longSignal, "Long: sweep + structure", 'LSM v1.0 LONG {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
-alertcondition(shortSignal, "Short: sweep + structure", 'LSM v1.0 SHORT {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
+alertcondition(longSignal, "Long: sweep + structure", 'LSM v1.1 LONG {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
+alertcondition(shortSignal, "Short: sweep + structure", 'LSM v1.1 SHORT {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
 
 string corner = panelCorner == "Top left" ? position.top_left : panelCorner == "Bottom left" ? position.bottom_left : panelCorner == "Bottom right" ? position.bottom_right : position.top_right
 string textSize = panelSize == "Large" ? size.large : panelSize == "Normal" ? size.normal : size.small
@@ -221,7 +254,7 @@ panelRow(int row, string key, string value, color ink) =>
     table.cell(panel, 1, row, value, text_color = ink, text_size = textSize, text_halign = text.align_left)
 if barstate.islast
     if showPanel
-        panelRow(0, "LSM v1.0 | " + timeframe.period, state, longSignal ? color.aqua : shortSignal ? color.orange : color.white)
+        panelRow(0, "LSM v1.1 | " + timeframe.period, state, longSignal ? color.aqua : shortSignal ? color.orange : color.white)
         panelRow(1, "Context " + contextTf, useHtf ? (contextDirection == 1 ? "BULLISH" : contextDirection == -1 ? "BEARISH" : "MIXED / UNREADY") + " | completed bar" : "Filter off", color.silver)
         panelRow(2, "Session / " + zone, useSession ? signalSession + " | " + (inSession ? "INSIDE" : "OUTSIDE") : "All chart hours", color.silver)
         panelRow(3, "Armed / age", armedDirection == 0 ? "None" : (armedDirection == 1 ? "LONG | " : "SHORT | ") + str.tostring(bar_index - armedBar) + "/" + str.tostring(validityBars), color.yellow)

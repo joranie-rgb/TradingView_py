@@ -35,11 +35,9 @@ class StrategyContractTests(unittest.TestCase):
         self.assertNotIn("dailyLossLocked", expression)
 
     def test_hard_caps_participate_in_final_quantity(self) -> None:
-        self.assertRegex(
-            SOURCE,
-            r"int allowedContracts = math\.min\(math\.min\(math\.min\("
-            r"riskSizingContracts, dailyCapacityContracts\), "
-            r"notionalBasedContracts\), maximumContracts\)",
+        self.assertIn(
+            "int allowedContracts = capContracts(riskSizingContracts, "
+            "dailyCapacityContracts, notionalBasedContracts, marginBasedContracts, maximumContracts)", SOURCE
         )
 
     def test_brackets_are_fill_relative_tick_distances(self) -> None:
@@ -60,12 +58,11 @@ class StrategyContractTests(unittest.TestCase):
             "time >= backtestStartTime and time_close <= backtestEndTime", SOURCE
         )
         self.assertIn(
-            "not na(time_close(timeframe.period, entrySession, sessionTimezone))",
+            "int entrySessionClose = time_close(timeframe.period, entrySession, sessionTimezone)",
             SOURCE,
         )
         self.assertIn(
-            "insideEntrySession = barOpensInsideEntrySession and "
-            "barClosesInsideEntrySession",
+            "insideEntrySession = barWithinSession(time, time_close, entrySessionOpen, entrySessionClose)",
             SOURCE,
         )
 
@@ -94,6 +91,8 @@ class StrategyContractTests(unittest.TestCase):
             "schema_version",
             "strategy_version",
             "event_id",
+            "instance_id",
+            "configuration_id",
             "event",
             "symbol",
             "exchange",
@@ -108,8 +107,8 @@ class StrategyContractTests(unittest.TestCase):
             "administrative_reason",
         ):
             self.assertIn(f'\\"{field}\\"', SOURCE)
-        self.assertIn('\\"schema_version\\":\\"1.0.0\\"', SOURCE)
-        self.assertIn('\\"strategy_version\\":\\"7.5\\"', SOURCE)
+        self.assertIn('\\"schema_version\\":\\"2.0.0\\"', SOURCE)
+        self.assertIn('\\"strategy_version\\":\\"7.5.2\\"', SOURCE)
         self.assertTrue((ROOT / "ALERT_SCHEMA.md").is_file())
 
     def test_alert_payload_avoids_multiline_concatenation(self) -> None:
@@ -139,6 +138,8 @@ class StrategyContractTests(unittest.TestCase):
         ]
         escaped_fields = {
             "event_id": "eventIdentifier",
+            "instance_id": "alertInstanceId",
+            "configuration_id": "configurationId",
             "event": "eventName",
             "symbol": "syminfo.ticker",
             "exchange": "syminfo.prefix",
@@ -167,7 +168,7 @@ class StrategyContractTests(unittest.TestCase):
 
     def test_entry_event_ids_are_unique_per_submission_and_shared_by_alerts(self) -> None:
         self.assertIn(
-            'str.tostring(submissionTimestamp) + ":" + eventName', SOURCE
+            'str.tostring(submittedAt) + ":" + eventName', SOURCE
         )
         for direction in ("long", "short"):
             payload_name = f"{direction}EntryPayload"

@@ -1,6 +1,7 @@
-# TradingView Futures Strategy V7.5
+# TradingView Futures Scripts
 
-This repository contains a TradingView Pine Script v6 strategy for researching
+This repository contains the LSM v1.1 indicator and V7.5.2 strategy, with a
+V7.4.1 compatibility strategy, in Pine Script v6. The strategy researches
 directional futures entries. It combines EMA, MACD, RSI, ATR, and optional
 relative-volume signals with fill-relative brackets, equity-based sizing, daily
 controls, session management, and a permanent peak-equity drawdown lock.
@@ -11,19 +12,26 @@ controls, session management, and a permanent peak-equity drawdown lock.
 | --- | --- |
 | [`liquidity_structure_v1.pine`](liquidity_structure_v1.pine) | Standalone sweep + structure indicator with confirmed HTF context, closing-bar alerts, and a compact status panel. Requires TradingView compilation/Replay validation. |
 | [`INDICATOR_REVIEW.md`](INDICATOR_REVIEW.md) | Screenshot/code review, new indicator rules, installation, and validation scenarios. |
-| [`Liquidity_Structure_Monitor_User_Guide.docx`](Liquidity_Structure_Monitor_User_Guide.docx) | Word end-user guide for installing, configuring, and using LSM v1.0, including alerts and troubleshooting. |
+| [`Liquidity_Structure_Monitor_User_Guide.docx`](Liquidity_Structure_Monitor_User_Guide.docx) | Word end-user guide for installing, configuring, and using LSM v1.1, including alerts and troubleshooting. |
 | [`futures_v7_5.pine`](futures_v7_5.pine) | Authoritative executable strategy source. |
+| [`futures_v7_4.pine`](futures_v7_4.pine) | V7.4.1 compatibility strategy with the shared risk/session fixes and legacy text alerts. |
 | [`ALERT_SCHEMA.md`](ALERT_SCHEMA.md) | Versioned JSON alert contract, event semantics, and receiver obligations. |
 | [`USER_GUIDE.md`](USER_GUIDE.md) | Installation, complete input reference, formulas, operating workflow, and troubleshooting. |
 | [`STRATEGY_REVIEW.md`](STRATEGY_REVIEW.md) | Code-review findings, execution semantics, safety boundaries, and residual risks. |
 | [`CODE_REVIEW_AND_FEATURE_ROADMAP.md`](CODE_REVIEW_AND_FEATURE_ROADMAP.md) | Current feature assessment and prioritized roadmap for future releases. |
 | [`tests/test_strategy_contract.py`](tests/test_strategy_contract.py) | Local static regression checks for safety-critical source invariants. |
+| [`tests/test_review_regressions.py`](tests/test_review_regressions.py) | Numerical edge-case checks of decision expressions extracted from both strategies and the indicator, plus integration wiring checks. |
+| [`REVIEW_FIXES.md`](REVIEW_FIXES.md) | Resolution of all 14 review findings, migration details, and remaining hosted validation. |
 
 If prose and behavior ever differ, the Pine source and TradingView's compiler
 and broker emulator are authoritative. This repository does not contain a Pine
 compiler or an automated execution simulator.
 
 ## Quick start
+
+For the indicator, follow the Word guide and [indicator instructions](INDICATOR_REVIEW.md).
+For the strategy, use the steps below. Existing alert receivers must migrate to
+[schema 2.0.0](ALERT_SCHEMA.md) and recreate alerts for V7.5.2.
 
 1. Read the [review and limitations](STRATEGY_REVIEW.md).
 2. Follow the [installation and chart-preparation guide](USER_GUIDE.md#3-installation).
