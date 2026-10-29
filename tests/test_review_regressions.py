@@ -6,6 +6,7 @@ simulator. Wiring checks complement numeric edge cases; hosted validation is
 still required for fills, sessions, drawings, and realtime rollback.
 """
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from types import SimpleNamespace
 import math
@@ -61,6 +62,8 @@ def translate(expression):
         elif char == "(":
             depth, end, inner_quote, inner_escape = 1, i+1, None, False
             while depth:
+                if end >= len(expression):
+                    raise ValueError("Unclosed parenthesis in supported Pine expression")
                 current = expression[end]
                 if inner_quote:
                     if inner_escape:
@@ -112,20 +115,21 @@ def pine_string(value, pattern=None):
 class Decisions:
     def __init__(self, source, fx=1):
         self.source = source
-        def dt(value):
-            return datetime.fromtimestamp(value / 1000, timezone.utc)
+        def dt(value, zone):
+            return datetime.fromtimestamp(value / 1000, ZoneInfo(zone))
         self.environment = {
             "na": lambda value: value is None,
             "int": int,
             "math": SimpleNamespace(floor=math.floor, ceil=math.ceil, min=min, max=max),
             "strategy": SimpleNamespace(convert_to_account=lambda value: value * fx),
-            "str": SimpleNamespace(tostring=pine_string, replace_all=lambda value, old, new: value.replace(old, new)),
+            "str": SimpleNamespace(tostring=pine_string, replace_all=lambda value, old, new: value.replace(old, new),
+                                   length=len, contains=lambda value, part: part in value),
             "sessionTimezone": "UTC",
-            "year": lambda value, zone: dt(value).year,
-            "month": lambda value, zone: dt(value).month,
-            "dayofmonth": lambda value, zone: dt(value).day,
+            "year": lambda value, zone: dt(value, zone).year,
+            "month": lambda value, zone: dt(value, zone).month,
+            "dayofmonth": lambda value, zone: dt(value, zone).day,
             "timestamp": lambda zone, y, m, day, hour, minute: int(
-                datetime(y, m, day, hour, minute, tzinfo=timezone.utc).timestamp() * 1000),
+                datetime(y, m, day, hour, minute, tzinfo=ZoneInfo(zone)).timestamp() * 1000),
         }
         functions = re.findall(r"^(\w+)\(([^\n]*)\) =>\n((?:    [^\n]*\n?)+)", source, re.M)
         self.functions = {name: (params, body) for name, params, body in functions}
@@ -285,7 +289,9 @@ class IndicatorBehaviorTests(unittest.TestCase):
         self.assertIn("dateKey != armedDate", INDICATOR)
         condition = arm_line.strip()[3:]
         self.assertTrue(self.engine.expression(condition, armedDirection=0, longSignal=False,
-            shortSignal=False, ready=True, inSession=True, newDay=True))
+            shortSignal=False, ready=True, inSession=True, newDay=True, crossesCalendarDate=False))
+        self.assertFalse(self.engine.expression(condition, armedDirection=0, longSignal=False,
+            shortSignal=False, ready=True, inSession=True, crossesCalendarDate=True))
 
     def test_targets_remain_favorable_for_both_directions(self):
         for direction in [-1, 1]:

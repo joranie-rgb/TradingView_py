@@ -14,8 +14,12 @@ snapshots for the same deployment. Deduplicate the entire opaque `event_id`;
 do not parse it into a fixed number of colon-delimited fields.
 
 Set **Alert Instance ID** uniquely per account/deployment, and change it when
-changing Strategy Properties. Behavior inputs are automatically encoded into a
-canonical configuration token, so different input configurations get different
+changing Strategy Properties. Labels must contain 1 to 64 ASCII letters, digits,
+underscores, or hyphens; spaces, control characters, and separators are rejected.
+This validation does not authenticate a sender. Behavior inputs are automatically
+encoded into the configuration token.
+
+The canonical configuration token ensures different input configurations get different
 IDs even when their instance labels match. The token is not a cryptographic hash
 or an authentication mechanism. Identical deployments sharing both the instance
 label and inputs intentionally share identities; do not reuse that namespace
