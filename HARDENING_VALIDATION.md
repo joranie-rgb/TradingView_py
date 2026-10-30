@@ -57,18 +57,29 @@ sandbox, an order simulator, or a historical/live equivalence proof.
 
 ## Outstanding acceptance evidence
 
-- Successful compilation of all three exact current source files in TradingView.
+- Completed runtime evaluation of the structured-alert strategy on MNQ (its
+  current report remains in Updating report state; displayed statistics may be
+  retained from the previously selected compatibility strategy).
 - Replay and live confirmation of resets, expiry/invalidation, drawing replacement,
   partial liquidations, closing-tick fills/commissions, and alert delivery.
 - Receiver-side acceptance tests in the actual external execution integration.
 - A final security and documentation audit after runtime corrections.
 
-The browser connection recovered on October 29. The exact working-tree indicator
-was pasted into Pine Editor. Clicking Add to chart opened TradingView's account
-sign-up prompt instead of a compiler result. The browser session is not signed
-in; the authenticated desktop application cannot be controlled by the available
-browser-only tools. This establishes neither compiler success nor compiler
-failure. Resume hosted checks in an authenticated TradingView browser session.
+On October 30, the browser confirmed Logged in as joranie. The exact indicator
+and both strategy sources from commit 2c11b54 were pasted into Pine Editor and
+accepted onto the chart with their expected script titles and no compiler
+diagnostics displayed. The indicator rendered EMAs, sweep markers and its panel
+on AAPL five-minute candles. The compatibility strategy completed evaluation on
+CME_MINI:MNQ1! five-minute candles, September 6 through October 30, 2026: 103
+trades, net P&L -439.50 USD, maximum drawdown 1,452.50 USD, profit factor 0.942.
+This is one default-settings smoke test, not a holdout or performance improvement.
+
+The structured-alert strategy was subsequently added, but its report continues
+to display Updating report. A bad:id instance input was submitted to test the
+new rejection path; no definitive runtime error result appeared, so that check
+is inconclusive. Its input was restored to research-1. Do not attribute the
+retained compatibility statistics to the structured-alert strategy or treat
+chart insertion as proof of completed execution.
 
 These are unreleased changes to the existing versioned files. Before a release,
 bump the script versions and synchronize the Word guide after hosted corrections.
