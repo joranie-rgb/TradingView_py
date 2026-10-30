@@ -68,6 +68,9 @@ stop orders or guarantees of the fill price.
 
 ## Local validation
 
+See [lifecycle hardening and outstanding runtime evidence](HARDENING_VALIDATION.md)
+for the current calendar policy, expanded tests, and hosted validation limits.
+
 The executable runtime is TradingView's hosted Pine v6 environment; there is no
 database, backend, package dependency, secret, environment variable, deployment
 manifest, or local service in this repository. Run the repository's dependency-

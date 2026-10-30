@@ -56,6 +56,9 @@ setupInvalidated(int direction, float lowest, float highest, float extreme) =>
 setupCancellation(bool sessionOk, bool dateReset, bool invalid, bool overAge) =>
     not sessionOk or dateReset ? "SESSION RESET" : invalid ? "SWEEP EXTREME BROKEN" : overAge ? "SETUP EXPIRED" : ""
 
+calendarDate(int instant) =>
+    year(instant, zone) * 10000 + month(instant, zone) * 100 + dayofmonth(instant, zone)
+
 if barstate.isfirst
     if fastLength >= slowLength
         runtime.error("Fast EMA must be shorter than slow EMA.")
@@ -69,6 +72,12 @@ if barstate.isfirst
         runtime.error("Symbol must have a positive tick size.")
     if str.length(sessionDays) == 0
         runtime.error("Session days cannot be empty.")
+    if str.length(sessionDays) > 7
+        runtime.error("Session days must contain unique digits from 1 through 7.")
+    for index = 0 to str.length(sessionDays) - 1
+        string digit = str.substring(sessionDays, index, index + 1)
+        if not str.contains("1234567", digit) or str.contains(str.substring(sessionDays, 0, index), digit)
+            runtime.error("Session days must contain unique digits from 1 through 7.")
 
 float tick = syminfo.mintick
 float fast = ta.ema(close, fastLength)
@@ -95,7 +104,11 @@ int sessionClose = time_close(timeframe.period, sessionSpec, zone)
 bool inSession = not useSession or (not na(sessionOpen) and not na(sessionClose) and time >= sessionOpen and time_close <= sessionClose)
 // Reset on the local calendar day as well as outside-session bars, including
 // charts that omit overnight data. Overnight sessions therefore reset at midnight.
-int dateKey = year(time, zone) * 10000 + month(time, zone) * 100 + dayofmonth(time, zone)
+int dateKey = calendarDate(time)
+// Attribute a candle to its opening date, but exclude candles containing prices
+// from both dates. Subtract one millisecond so an exact midnight close belongs
+// to the candle's ending day rather than the following interval.
+bool crossesCalendarDate = dateKey != calendarDate(time_close - 1)
 float ph = ta.pivothigh(high, pivotBars, pivotBars)
 float pl = ta.pivotlow(low, pivotBars, pivotBars)
 var float swingHigh = na
@@ -131,7 +144,7 @@ bool riskOk = ready and candidateRisk >= atr * minStopAtr and candidateRisk <= a
 bool structureBroken = armedDirection == 1 ? close >= breakLevel + breakTicks * tick : armedDirection == -1 and close <= breakLevel - breakTicks * tick
 bool invalidated = setupInvalidated(armedDirection, low, high, sweepExtreme)
 bool expired = armedDirection != 0 and bar_index - armedBar > validityBars
-string pendingCancellation = setupCancellation(inSession, armedDirection != 0 and dateKey != armedDate, invalidated, expired)
+string pendingCancellation = setupCancellation(inSession and not crossesCalendarDate, armedDirection != 0 and dateKey != armedDate, invalidated, expired)
 
 // Values above describe the setup entering this bar. A sweep armed below can
 // only signal on a later bar; this avoids guessing sweep/BOS intrabar ordering.
@@ -172,7 +185,7 @@ if barstate.isconfirmed
     bool bullSweep = tookLow and close > swingLow
     bool bearSweep = tookHigh and close < swingHigh
     // Resetting the previous date's arm does not suppress today's first sweep.
-    if armedDirection == 0 and not longSignal and not shortSignal and ready and inSession
+    if armedDirection == 0 and not longSignal and not shortSignal and ready and inSession and not crossesCalendarDate
         if allowLong and bullSweep and not piercedHigh and not na(swingHigh) and swingHigh > close
             armedDirection := 1
             armedBar := bar_index
@@ -211,12 +224,14 @@ bool displayLocal = not useLocalTrend or (armedDirection == 1 ? fast > slow and 
 bool displayBody = ready and math.abs(close - open) >= atr * minBodyAtr and (armedDirection == 1 ? close > open : close < open)
 // Recompute after cancellation/rearming: incoming snapshots may describe an old
 // setup. The panel can warn immediately while signals remain close-confirmed.
-string displayCancellation = armedDirection == 0 ? "" : setupCancellation(inSession, dateKey != armedDate, setupInvalidated(armedDirection, low, high, sweepExtreme), bar_index - armedBar > validityBars)
+string displayCancellation = armedDirection == 0 ? "" : setupCancellation(inSession and not crossesCalendarDate, dateKey != armedDate, setupInvalidated(armedDirection, low, high, sweepExtreme), bar_index - armedBar > validityBars)
 string state = "WAIT FOR SWEEP"
 if not ready
     state := "WARMING UP"
 else if not inSession
     state := "OUTSIDE SESSION"
+else if crossesCalendarDate
+    state := "DATE BOUNDARY BAR"
 else if not allowLong and not allowShort
     state := "SIGNALS DISABLED"
 else if longSignal or shortSignal

@@ -1,5 +1,11 @@
 # Futures V7.5.2 — End-User Guide
 
+Unreleased hardening changes are documented in [HARDENING_VALIDATION.md](HARDENING_VALIDATION.md).
+Candles spanning local midnight cannot submit new entries. Alert Instance ID
+must contain 1–64 ASCII letters, digits, underscores, or hyphens. Recreate alerts
+after changing the source or inputs. Hosted compilation and execution validation
+of these draft changes remains pending.
+
 ## 1. What this strategy is
 
 `futures_v7_5.pine` is a TradingView Pine Script v6 **strategy** for testing

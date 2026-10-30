@@ -169,6 +169,8 @@ if barstate.isfirst and (syminfo.mintick <= 0 or syminfo.pointvalue <= 0)
 bool insideBacktestRange = not useBacktestDateFilter or time >= backtestStartTime and time_close <= backtestEndTime
 // Calendar midnight has no excluded minute, even on continuous 1m charts.
 int currentRiskDay = riskDayStamp(time)
+// Never submit a new entry from a candle mixing two calendar dates.
+bool crossesRiskDay = currentRiskDay != riskDayStamp(time_close - 1)
 bool newRiskDay = dayChanged(currentRiskDay, currentRiskDay[1])
 int entrySessionOpen = time(timeframe.period, entrySession, sessionTimezone)
 int entrySessionClose = time_close(timeframe.period, entrySession, sessionTimezone)
@@ -203,7 +205,7 @@ bool rsiSupportsShort = rsiValue > rsiShortMinimum and rsiValue <= rsiShortMaxim
 bool calculationsReady = not na(emaSlow) and not na(rsiValue) and not na(atrValue) and not na(macdHistogram)
 bool volumeQualified = not useVolumeFilter or not na(volume) and not na(averageVolume) and averageVolume > 0 and relativeVolume >= minimumRelativeVolume
 bool indicatorFiltersQualified = calculationsReady and atrPercent >= minimumAtrPercent and volumeQualified
-bool executionTimeQualified = (not useEntrySession or insideEntrySession) and insideBacktestRange
+bool executionTimeQualified = (not useEntrySession or insideEntrySession) and insideBacktestRange and not crossesRiskDay
 
 int longScore = (bullishAlignment ? 2 : 0) + (freshBullCross ? 2 : 0) + (fastEmaRising ? 1 : 0) + (close > emaFast ? 1 : 0) + (emaSeparationAtr >= minimumEmaSeparationAtr ? 1 : 0) + (macdLine > macdSignalLine ? 1 : 0) + (macdHistogram > 0 ? 1 : 0) + (not na(macdHistogram[1]) and macdHistogram > macdHistogram[1] ? 1 : 0) + (freshMacdBullCross ? 1 : 0) + (rsiSupportsLong ? 1 : 0)
 int shortScore = (bearishAlignment ? 2 : 0) + (freshBearCross ? 2 : 0) + (fastEmaFalling ? 1 : 0) + (close < emaFast ? 1 : 0) + (emaSeparationAtr >= minimumEmaSeparationAtr ? 1 : 0) + (macdLine < macdSignalLine ? 1 : 0) + (macdHistogram < 0 ? 1 : 0) + (not na(macdHistogram[1]) and macdHistogram < macdHistogram[1] ? 1 : 0) + (freshMacdBearCross ? 1 : 0) + (rsiSupportsShort ? 1 : 0)
@@ -347,6 +349,8 @@ entryBlocker(bool directionEnabled, bool technicalSetup, bool signalActive) =>
         blocker := "NO TECHNICAL SETUP"
     else if not signalActive
         blocker := "SIGNAL EXPIRED"
+    else if crossesRiskDay
+        blocker := "DATE BOUNDARY BAR"
     else if useBacktestDateFilter and not insideBacktestRange
         blocker := "OUTSIDE BACKTEST RANGE"
     else if useEntrySession and not insideEntrySession
