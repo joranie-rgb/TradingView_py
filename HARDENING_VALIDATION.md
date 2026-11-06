@@ -102,9 +102,11 @@ recovery after correction. It does not prove all lifecycle cases, alert delivery
 external receiver behavior, statistical improvement, or production readiness.
 
 These are unreleased changes to the existing versioned files. Before a release,
-bump the script versions and synchronize the Word guide after hosted corrections.
-The current Word guide predates the stricter session-day validation and calendar
-boundary exclusion; this document is the addendum for this draft.
+bump the script versions after any remaining hosted corrections. On November 6,
+the Word guide was synchronized with session-day validation, calendar-boundary
+exclusion, the DATE BOUNDARY BAR display state, and the hosted smoke-test status.
+All seven pages were rendered through LibreOffice and inspected for wrapping,
+clipping, table layout, page breaks, and readable footers.
 
 No signal-performance optimization or improved win-rate claim has been made.
 Any later filter optimization requires a frozen baseline, chronological holdout,
