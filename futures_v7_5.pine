@@ -117,6 +117,14 @@ bool showDashboard = input.bool(true, "Show Dashboard", group = GROUP_DISPLAY)
 float chartTimeframeSeconds = timeframe.in_seconds()
 
 // Small decision helpers are exercised directly by the local expression tests.
+sessionWindowEnd(int barOpen, string sessionHours, string timezone) =>
+    int startMinute = int(str.tonumber(str.substring(sessionHours, 0, 2))) * 60 + int(str.tonumber(str.substring(sessionHours, 2, 4)))
+    int endHour = int(str.tonumber(str.substring(sessionHours, 5, 7)))
+    int endMinute = int(str.tonumber(str.substring(sessionHours, 7, 9)))
+    int openMinute = hour(barOpen, timezone) * 60 + minute(barOpen, timezone)
+    int endDayOffset = endHour * 60 + endMinute <= startMinute and openMinute >= startMinute ? 1 : 0
+    timestamp(timezone, year(barOpen, timezone), month(barOpen, timezone), dayofmonth(barOpen, timezone) + endDayOffset, endHour, endMinute)
+
 riskDayStamp(int barTime) =>
     timestamp(sessionTimezone, year(barTime, sessionTimezone), month(barTime, sessionTimezone), dayofmonth(barTime, sessionTimezone), 0, 0)
 
@@ -294,8 +302,8 @@ alertPayload(string eventName, string action, string direction, float quantity, 
     payload
 
 bool newRiskDay = dayChanged(currentRiskDay, currentRiskDay[1])
-int entrySessionOpen = time(timeframe.period, entrySession, sessionTimezone)
-int entrySessionClose = time_close(timeframe.period, entrySession, sessionTimezone)
+int entrySessionOpen = time("1", entrySession, sessionTimezone)
+int entrySessionClose = sessionWindowEnd(time, entrySession, sessionTimezone)
 bool insideEntrySession = barWithinSession(time, time_close, entrySessionOpen, entrySessionClose)
 bool insideSessionExitWindow = not na(time(timeframe.period, sessionExitWindow, sessionTimezone))
 int sessionExitCutoffTimestamp = timestamp(sessionTimezone, year(time, sessionTimezone), month(time, sessionTimezone), dayofmonth(time, sessionTimezone), sessionExitCutoffHour, sessionExitCutoffMinute)

@@ -18,9 +18,9 @@ excluding a normal last candle merely because its endpoint is midnight.
 
 Daily-loss baselines continue to use the previous available valuation. They
 include first-bar losses and closure gaps, but are not independently sampled
-midnight account balances. Post-calculation closing-tick fills and commissions
-must still be reconciled in the hosted emulator. Local supplied-observation
-fixtures do not prove their actual delivery timing.
+midnight account balances. The November 11 hosted forced-order fixture reconciles closing-tick fills and
+commissions for one long, partial-exit and re-entry sequence. This is bounded
+emulator evidence, not an independently sampled midnight broker balance.
 
 ## Validation and contracts
 
@@ -41,7 +41,7 @@ fixtures do not prove their actual delivery timing.
 ## Local evidence
 
 Run `python -B -m unittest discover -s tests -v` and `git diff --check`.
-The current suite has 53 passing tests. New coverage includes New York midnight,
+The current suite has 55 passing tests. New coverage includes New York midnight,
 spring and fall daylight-saving changes, repeated local hours, partial/full exit
 sequences, missing currency conversion, reset baselines, date-spanning candles,
 payload identity and expiration, and explicit evaluator failures.
@@ -55,12 +55,22 @@ The bounded test evaluator executes selected source expressions and straight-lin
 serialization helpers. It is not Pine, a full script interpreter, a security
 sandbox, an order simulator, or a historical/live equivalence proof.
 
-## Outstanding acceptance evidence
+## Acceptance scope after November 11
 
-- Replay and live confirmation of resets, expiry/invalidation, drawing replacement,
-  partial liquidations, closing-tick fills/commissions, and alert delivery.
-- Receiver-side acceptance tests in the actual external execution integration.
-- A final security and documentation audit after runtime corrections.
+Hosted historical lifecycle assertions and forced-order accounting reconciliation
+are recorded in [the hosted test report](tests/hosted/RESULTS_2026-11-11.md).
+The run found and corrected hourly session alignment in all three scripts.
+Local checks, hosted source compilation and the final repository audit are
+complete for this patch. Script versions remain unreleased; this PR is not a
+published script release.
+
+External receiver testing is **UNVERIFIED**. No receiver implementation or broker
+integration exists in this repository. Durable deduplication, expired-alert
+rejection, authentication, delivery retries and broker fill reconciliation were
+not tested. Per the user's November 11 scope instruction, this does not block
+repository completion. Live alert delivery, Bar Replay playback, exhaustive
+short-side/FX/margin liquidation cases, and statistical improvement are also
+not established by these historical fixtures.
 
 On October 30, the browser confirmed Logged in as joranie. The exact indicator
 and both strategy sources from commit 2c11b54 were pasted into Pine Editor and
