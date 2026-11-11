@@ -479,3 +479,17 @@ in `STRATEGY_REVIEW.md`. In particular, no bar-close strategy can guarantee an
 intrabar daily-loss threshold, gap price, partial fill, or live liquidation
 price. TradingView's Pine compiler and broker emulator are authoritative for
 actual script behavior.
+
+## Unreleased session-alignment correction (November 11, 2026)
+
+Entry-session membership uses the actual candle opening minute and the calendar
+end of the configured session. A 10:00-11:00 hourly candle can therefore fit a
+09:30-16:00 session, while a 15:00-16:00 candle is excluded from a 09:30-15:45
+entry session. A bar opening before the session is excluded even if it overlaps
+it. Overnight ends roll into the following calendar day; the separate rule
+excluding candles that mix calendar dates still applies. Session-day membership
+continues to use TradingView's session rules.
+
+See the [hosted evidence](tests/hosted/RESULTS_2026-11-11.md). Existing saved
+alerts retain their old source snapshot; recreate them when adopting this patch.
+External receiver and live alert-delivery tests remain **UNVERIFIED**.

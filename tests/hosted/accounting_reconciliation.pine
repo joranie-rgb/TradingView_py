@@ -1,0 +1,133 @@
+//@version=6
+strategy("HOSTED Accounting reconciliation", shorttitle="HOSTED Ledger", overlay=true,
+ initial_capital=500000, currency=currency.USD, pyramiding=0,
+ commission_type=strategy.commission.cash_per_contract, commission_value=2.5,
+ slippage=1, process_orders_on_close=true, calc_on_order_fills=false,
+ calc_on_every_tick=false, margin_long=100, margin_short=100)
+string sessionTimezone = "America/New_York"
+int anchor = input.time(timestamp("10 Nov 2026 23:57 -0500"), "First order bar open")
+if barstate.isfirst and timeframe.in_seconds() != 60
+    runtime.error("Use standard MNQ one-minute ETH candles")
+riskDayStamp(int barTime) =>
+    timestamp(sessionTimezone, year(barTime, sessionTimezone), month(barTime, sessionTimezone), dayofmonth(barTime, sessionTimezone), 0, 0)
+
+dayChanged(int currentDay, int previousDay) =>
+    not na(previousDay) and currentDay != previousDay
+
+fullPositionExit(float currentSize, float previousSize, int closedChange) =>
+    currentSize == 0 and (previousSize != 0 or closedChange > 0)
+
+freshEntry(int observedTime, int countedTime) =>
+    not na(observedTime) and (na(countedTime) or observedTime != countedTime)
+
+dailyBaseline(bool changed, float previousValue, float currentValue) =>
+    changed and not na(previousValue) ? previousValue : currentValue
+
+// Production source SHA256: 9d94057a7a8705a11ec87eaef37722c1361e5528d23a91c59ed549bd4cdb5a96
+int currentRiskDay = riskDayStamp(time)
+bool newRiskDay = dayChanged(currentRiskDay, currentRiskDay[1])
+bool newPositionOpened = strategy.position_size != 0 and strategy.position_size[1] == 0
+int closedTradeChange = strategy.closedtrades - nz(strategy.closedtrades[1], 0)
+bool positionJustClosed = fullPositionExit(strategy.position_size, nz(strategy.position_size[1], 0), closedTradeChange)
+// One entry per timestamp is possible with no pyramiding and close-only orders.
+// The latest closed record also catches a round trip never observed as open.
+int observedEntryTime = strategy.opentrades > 0 ? strategy.opentrades.entry_time(0) : strategy.closedtrades > 0 ? strategy.closedtrades.entry_time(strategy.closedtrades - 1) : na
+var int lastCountedEntryTime = na
+bool newlyObservedEntry = freshEntry(observedEntryTime, lastCountedEntryTime)
+var float dayStartingEquity = na
+var float dayStartingNetProfit = na
+var int tradesToday = 0
+var bool dailyLossLocked = false
+var bool sessionExitProcessed = false
+var int lastExitBar = na
+var float peakStrategyEquity = na
+var bool maximumDrawdownLocked = false
+
+if barstate.isfirst or newRiskDay
+    // Carry the previous available valuation across the reset. First-bar losses
+    // and overnight gaps must not disappear into a newly sampled baseline.
+    dayStartingEquity := dailyBaseline(newRiskDay, strategy.equity[1], strategy.equity)
+    dayStartingNetProfit := dailyBaseline(newRiskDay, strategy.netprofit[1], strategy.netprofit)
+    tradesToday := 0
+    dailyLossLocked := false
+    sessionExitProcessed := false
+if barstate.isfirst
+    peakStrategyEquity := strategy.equity
+    maximumDrawdownLocked := false
+peakStrategyEquity := math.max(nz(peakStrategyEquity, strategy.equity), strategy.equity)
+if newlyObservedEntry
+    // Attribute delayed observations to the actual fill day, not this bar's day.
+    if riskDayStamp(observedEntryTime) == currentRiskDay
+        tradesToday += 1
+    lastCountedEntryTime := observedEntryTime
+if positionJustClosed
+    lastExitBar := bar_index
+
+
+int step = int((time - anchor) / 60000)
+var int entriesObserved = 0
+var int fullExitsObserved = 0
+var int partialExitsObserved = 0
+var int plan = na
+if newlyObservedEntry
+    entriesObserved += 1
+if positionJustClosed
+    fullExitsObserved += 1
+    plan := na
+if closedTradeChange > 0 and strategy.position_size != 0
+    partialExitsObserved += 1
+    if na(plan) or positionJustClosed
+        runtime.error("AUDIT: partial exit destroyed plan")
+if time >= anchor and step <= 5
+    float expectedSize = step == 1 ? 3 : step == 2 ? 2 : step == 4 ? 2 : 0
+    if strategy.position_size != expectedSize
+        runtime.error("AUDIT: wrong observed position at step " + str.tostring(step))
+    if step == 2 and not na(lastExitBar)
+        runtime.error("AUDIT: partial exit started full-exit cooldown")
+    if step == 3 and lastExitBar != bar_index
+        runtime.error("AUDIT: full exit did not start cooldown")
+    if step == 3 and (dayStartingEquity != strategy.equity[1] or dayStartingNetProfit != strategy.netprofit[1])
+        runtime.error("AUDIT: reset lost previous valuation baseline")
+    if step == 3 and tradesToday != 0
+        runtime.error("AUDIT: old entry recounted after midnight")
+    if step == 4 and tradesToday != 1
+        runtime.error("AUDIT: fresh entry not counted in new day")
+if time == anchor
+    plan := 100000
+    strategy.entry("Audit", strategy.long, qty=3)
+    strategy.exit("Protection", "Audit", loss=plan, profit=plan)
+if time == anchor + 60000
+    strategy.close("Audit", qty=1, immediately=true, comment="Partial one")
+if time == anchor + 120000
+    strategy.close("Audit", immediately=true, comment="Full remainder")
+if time == anchor + 180000
+    plan := 100000
+    strategy.entry("Audit", strategy.long, qty=2)
+    strategy.exit("Protection", "Audit", loss=plan, profit=plan)
+if time == anchor + 240000
+    strategy.close("Audit", immediately=true, comment="Full second")
+float gross = 0
+float fees = 0
+if strategy.closedtrades > 0
+    for i = 0 to strategy.closedtrades - 1
+        gross += (strategy.closedtrades.exit_price(i) - strategy.closedtrades.entry_price(i)) * strategy.closedtrades.size(i) * syminfo.pointvalue
+        fees += strategy.closedtrades.commission(i)
+bool complete = time >= anchor + 300000 and entriesObserved == 2 and fullExitsObserved == 2 and partialExitsObserved == 1 and strategy.closedtrades == 3
+if complete and (math.abs(gross - fees - strategy.netprofit) > 0.01 or math.abs(fees - 25) > 0.01)
+    runtime.error("AUDIT: fill-price/commission ledger mismatch")
+var table audit = table.new(position.top_right, 2, 7, bgcolor=color.black)
+if barstate.islastconfirmedhistory or barstate.islast
+    table.cell(audit, 0, 0, "HOSTED LEDGER", text_color=color.white)
+    table.cell(audit, 1, 0, complete ? "PASS" : "INCOMPLETE", text_color=color.lime)
+    table.cell(audit, 0, 1, "Entries / partial / full", text_color=color.white)
+    table.cell(audit, 1, 1, str.tostring(entriesObserved)+" / "+str.tostring(partialExitsObserved)+" / "+str.tostring(fullExitsObserved), text_color=color.white)
+    table.cell(audit, 0, 2, "Closed records", text_color=color.white)
+    table.cell(audit, 1, 2, str.tostring(strategy.closedtrades), text_color=color.white)
+    table.cell(audit, 0, 3, "Gross from fills", text_color=color.white)
+    table.cell(audit, 1, 3, str.tostring(gross,"#.00"), text_color=color.white)
+    table.cell(audit, 0, 4, "Commission", text_color=color.white)
+    table.cell(audit, 1, 4, str.tostring(fees,"#.00"), text_color=color.white)
+    table.cell(audit, 0, 5, "Net from fills", text_color=color.white)
+    table.cell(audit, 1, 5, str.tostring(gross-fees,"#.00"), text_color=color.white)
+    table.cell(audit, 0, 6, "Emulator net", text_color=color.white)
+    table.cell(audit, 1, 6, str.tostring(strategy.netprofit,"#.00"), text_color=color.white)

@@ -10,7 +10,7 @@ controls, session management, and a permanent peak-equity drawdown lock.
 
 | File | Purpose |
 | --- | --- |
-| [`liquidity_structure_v1.pine`](liquidity_structure_v1.pine) | Standalone sweep + structure indicator with confirmed HTF context, closing-bar alerts, and a compact status panel. Requires TradingView compilation/Replay validation. |
+| [`liquidity_structure_v1.pine`](liquidity_structure_v1.pine) | Standalone sweep + structure indicator with confirmed HTF context, closing-bar alerts, and a compact status panel. Hosted lifecycle assertions recorded in `tests/hosted`; live/Replay validation remains separate. |
 | [`INDICATOR_REVIEW.md`](INDICATOR_REVIEW.md) | Screenshot/code review, new indicator rules, installation, and validation scenarios. |
 | [`Liquidity_Structure_Monitor_User_Guide.docx`](Liquidity_Structure_Monitor_User_Guide.docx) | Word end-user guide for installing, configuring, and using LSM v1.1, including alerts and troubleshooting. |
 | [`futures_v7_5.pine`](futures_v7_5.pine) | Authoritative executable strategy source. |
@@ -84,3 +84,10 @@ Then compile the complete source in TradingView Pine Editor and perform the
 symbol-specific broker-emulator checks in the user guide. The local tests guard
 important textual/state-machine invariants but are not a Pine compiler or a
 substitute for trade-by-trade emulator validation.
+
+## Hosted lifecycle and accounting evidence
+
+The [November 11 report](tests/hosted/RESULTS_2026-11-11.md) records hosted
+assertions, individual emulator fills, the hourly session fix, and test limits.
+[Reproducible fixtures](tests/hosted/README.md) are isolated from production
+alerts and use source digests. External receiver testing is **UNVERIFIED**.
