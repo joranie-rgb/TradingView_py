@@ -58,7 +58,7 @@ class StrategyContractTests(unittest.TestCase):
             "time >= backtestStartTime and time_close <= backtestEndTime", SOURCE
         )
         self.assertIn(
-            "int entrySessionClose = time_close(timeframe.period, entrySession, sessionTimezone)",
+            "int entrySessionClose = sessionWindowEnd(time, entrySession, sessionTimezone)",
             SOURCE,
         )
         self.assertIn(

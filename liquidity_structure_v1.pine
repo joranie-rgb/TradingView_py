@@ -56,6 +56,14 @@ setupInvalidated(int direction, float lowest, float highest, float extreme) =>
 setupCancellation(bool sessionOk, bool dateReset, bool invalid, bool overAge) =>
     not sessionOk or dateReset ? "SESSION RESET" : invalid ? "SWEEP EXTREME BROKEN" : overAge ? "SETUP EXPIRED" : ""
 
+sessionWindowEnd(int barOpen, string sessionHours, string timezone) =>
+    int startMinute = int(str.tonumber(str.substring(sessionHours, 0, 2))) * 60 + int(str.tonumber(str.substring(sessionHours, 2, 4)))
+    int endHour = int(str.tonumber(str.substring(sessionHours, 5, 7)))
+    int endMinute = int(str.tonumber(str.substring(sessionHours, 7, 9)))
+    int openMinute = hour(barOpen, timezone) * 60 + minute(barOpen, timezone)
+    int endDayOffset = endHour * 60 + endMinute <= startMinute and openMinute >= startMinute ? 1 : 0
+    timestamp(timezone, year(barOpen, timezone), month(barOpen, timezone), dayofmonth(barOpen, timezone) + endDayOffset, endHour, endMinute)
+
 calendarDate(int instant) =>
     year(instant, zone) * 10000 + month(instant, zone) * 100 + dayofmonth(instant, zone)
 
@@ -97,10 +105,10 @@ if useHtf
 int contextDirection = htfClose > htfFast and htfFast > htfSlow ? 1 : htfClose < htfFast and htfFast < htfSlow ? -1 : 0
 bool ready = not na(atr) and atr > 0 and not na(slow) and (not useHtf or not na(htfSlow))
 string sessionSpec = signalSession + ":" + sessionDays
-// Compare actual bar endpoints against the session-generated endpoints. This
-// rejects partial bars at session boundaries, including a 1h bar ending late.
-int sessionOpen = time(timeframe.period, sessionSpec, zone)
-int sessionClose = time_close(timeframe.period, sessionSpec, zone)
+// Test the actual open at minute resolution, then compare the actual close
+// with the calendar session end; chart/session candle grids need not align.
+int sessionOpen = time("1", sessionSpec, zone)
+int sessionClose = sessionWindowEnd(time, signalSession, zone)
 bool inSession = not useSession or (not na(sessionOpen) and not na(sessionClose) and time >= sessionOpen and time_close <= sessionClose)
 // Reset on the local calendar day as well as outside-session bars, including
 // charts that omit overnight data. Overnight sessions therefore reset at midnight.

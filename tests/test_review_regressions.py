@@ -5,7 +5,7 @@ the helpers below. It is NOT a Pine compiler, order emulator, or full-script
 simulator. Wiring checks complement numeric edge cases; hosted validation is
 still required for fills, sessions, drawings, and realtime rollback.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from types import SimpleNamespace
@@ -123,13 +123,16 @@ class Decisions:
             "math": SimpleNamespace(floor=math.floor, ceil=math.ceil, min=min, max=max),
             "strategy": SimpleNamespace(convert_to_account=lambda value: value * fx),
             "str": SimpleNamespace(tostring=pine_string, replace_all=lambda value, old, new: value.replace(old, new),
-                                   length=len, contains=lambda value, part: part in value),
+                                   length=len, contains=lambda value, part: part in value,
+                                   substring=lambda value, start, end: value[start:end], tonumber=float),
             "sessionTimezone": "UTC",
+            "hour": lambda value, zone: dt(value, zone).hour,
+            "minute": lambda value, zone: dt(value, zone).minute,
             "year": lambda value, zone: dt(value, zone).year,
             "month": lambda value, zone: dt(value, zone).month,
             "dayofmonth": lambda value, zone: dt(value, zone).day,
             "timestamp": lambda zone, y, m, day, hour, minute: int(
-                datetime(y, m, day, hour, minute, tzinfo=ZoneInfo(zone)).timestamp() * 1000),
+                (datetime(y, m, 1, hour, minute, tzinfo=ZoneInfo(zone)) + timedelta(days=day-1)).timestamp() * 1000),
         }
         functions = re.findall(r"^(\w+)\(([^\n]*)\) =>\n((?:    [^\n]*\n?)+)", source, re.M)
         self.functions = {name: (params, body) for name, params, body in functions}
@@ -192,6 +195,26 @@ class StrategyBehaviorTests(unittest.TestCase):
                     self.assertEqual(engine.call("barWithinSession", bar_open, bar_close, 900, 945), expected)
             self.assertFalse(engine.call("barWithinSession", 900, 930, None, None))
             self.assertIn("barWithinSession(time, time_close, entrySessionOpen, entrySessionClose)", source)
+
+    def test_calendar_session_end_ignores_chart_candle_alignment(self):
+        for source in [*(p.read_text(encoding="utf-8") for p in STRATEGIES), INDICATOR]:
+            engine = Decisions(source)
+            cases = [
+                ("2026-11-10T10:00", "0930-1600", "2026-11-10T16:00"),
+                ("2026-11-10T15:00", "0930-1545", "2026-11-10T15:45"),
+                ("2026-12-31T23:00", "1800-0500", "2027-01-01T05:00"),
+                ("2027-01-01T02:00", "1800-0500", "2027-01-01T05:00"),
+                ("2026-03-07T20:00", "1800-0500", "2026-03-08T05:00"),
+                ("2026-10-31T20:00", "1800-0500", "2026-11-01T05:00"),
+                ("2026-11-10T00:00", "0000-0000", "2026-11-11T00:00"),
+            ]
+            for opened, hours, ended in cases:
+                def instant(text):
+                    return int(datetime.fromisoformat(text).replace(tzinfo=ZoneInfo("America/New_York")).timestamp()*1000)
+                with self.subTest(hours=hours, opened=opened):
+                    self.assertEqual(engine.call("sessionWindowEnd", instant(opened), hours, "America/New_York"), instant(ended))
+            self.assertNotIn("time_close(timeframe.period, entrySession", source)
+            self.assertNotIn("time_close(timeframe.period, sessionSpec", source)
 
     def test_partial_exit_retains_plan_and_does_not_count_another_entry(self):
         for path in STRATEGIES:
