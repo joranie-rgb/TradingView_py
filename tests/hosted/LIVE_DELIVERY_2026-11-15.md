@@ -147,3 +147,28 @@ This Sunday evening check is outside the configured 09:30–15:45 strategy-entry
 window and weekday 09:30–16:00 LSM signal window. Market open alone does not
 make these signal conditions eligible. No filters, source inputs, alert
 settings, chart intervals or broker connections were changed to force events.
+
+## Follow-up requested as regular session: November 15, 18:54 New York
+
+The requested check was performed immediately. The actual clock was Sunday,
+November 15, 2026, approximately 18:54 America/New_York (23:54 UTC), so this
+was an evening follow-up, not a regular-session validation. The next configured
+weekday signal session begins Monday, November 16 at 09:30 New York time.
+
+Both charts showed Market open and the saved layout showed All changes saved.
+The Alerts list showed all four replacements Active. The strategies' latest
+trigger times remained 18:01 for V7.5.3 and 18:05 for V7.4.2; neither LSM alert
+displayed a trigger time. The populated Log showed those same two SESSION_EXIT
+events followed by older historical records. No new LSM LONG/SHORT signal,
+strategy entry-intent or order-fill event was observed.
+
+![18:54 log follow-up outside the regular signal session](evidence/tradingview-followup-log-1854.jpg)
+
+No new live payload or browser toast was observed and no additional mobile push
+or sound receipt was reported. The earlier receipt confirmations apply only
+to the previously documented SESSION_EXIT events. No additional delivery pass
+or failure is claimed. LSM LONG/SHORT delivery remains PENDING; strategy
+entry/fill delivery and order-fill placeholder expansion remain UNVERIFIED.
+This check does not establish that eligible regular-session signals have been
+observed. No alerts, signal filters, source inputs or chart intervals were
+changed, and the log was not cleared.
