@@ -70,8 +70,11 @@ value and tick-size guards retain independent local coverage; those metadata
 fields were not individually falsified in the hosted run.
 
 Local checks, hosted source compilation and the final repository audit are
-complete for this patch. Script versions remain unreleased; this PR is not a
-published script release.
+complete for the behavior patch. The [release candidate](RELEASE_NOTES.md)
+renames those validated sources to V7.5.3, V7.4.2 and LSM v1.1.1. The version
+changes are checked locally; these renamed sources have not been separately
+compiled in TradingView. Historical reports retain their tested versions and
+source digests. No GitHub Release or TradingView publication has been made.
 
 External receiver testing is **UNVERIFIED**. No receiver implementation or broker
 integration exists in this repository. Durable deduplication, expired-alert
@@ -120,8 +123,8 @@ This verifies successful execution, rejection of a malformed identity, and
 recovery after correction. It does not prove all lifecycle cases, alert delivery,
 external receiver behavior, statistical improvement, or production readiness.
 
-These are unreleased changes to the existing versioned files. Before a release,
-bump the script versions after any remaining hosted corrections. On November 6,
+The fixes are packaged in the patch versions listed in RELEASE_NOTES.md.
+On November 6,
 the Word guide was synchronized with session-day validation, calendar-boundary
 exclusion, the DATE BOUNDARY BAR display state, and the hosted smoke-test status.
 All seven pages were rendered through LibreOffice and inspected for wrapping,

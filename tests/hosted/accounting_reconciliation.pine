@@ -24,7 +24,7 @@ freshEntry(int observedTime, int countedTime) =>
 dailyBaseline(bool changed, float previousValue, float currentValue) =>
     changed and not na(previousValue) ? previousValue : currentValue
 
-// Production source SHA256: 9d94057a7a8705a11ec87eaef37722c1361e5528d23a91c59ed549bd4cdb5a96
+// Production source SHA256: 362d90a1f8f2241d825c897bed74375b8f25f59bdf40be46f12bca3af60f1fbc
 int currentRiskDay = riskDayStamp(time)
 bool newRiskDay = dayChanged(currentRiskDay, currentRiskDay[1])
 bool newPositionOpened = strategy.position_size != 0 and strategy.position_size[1] == 0

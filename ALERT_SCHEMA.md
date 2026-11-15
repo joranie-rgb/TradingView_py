@@ -1,15 +1,24 @@
-# Futures V7.5.2 alert payload schema
+# Futures V7.5.3 alert payload schema
 
-V7.5.2 emits JSON objects from both `alert()` calls and
+V7.5.3 emits JSON objects from both `alert()` calls and
 order-fill alert fields. The schema version is `2.0.0`; changing a field's name,
 type, required status, or meaning requires a new schema version. Strategy version
 and schema version are independent.
+
+## Migration from V7.5.2
+
+The JSON field contract stays at schema **2.0.0**. Update strict receiver
+strategy-version allowlists to `7.5.3`, then archive and recreate TradingView
+alerts from the new source. Both `strategy_version` and the opaque event-ID
+prefix change to `7.5.3`; the version bump separates the new source namespace.
+Do not mix old and new alerts for the same deployment. External receiver
+behavior is unverified; see [release notes](RELEASE_NOTES.md).
 
 ## Migration from schema 1
 
 Schema 2 adds required `instance_id` and `configuration_id` fields and changes
 event identity. Update strict receivers to accept schema `2.0.0` and strategy
-`7.5.2` before recreating TradingView alerts. Do not mix old and new alert
+`7.5.3` before recreating TradingView alerts. Do not mix old and new alert
 snapshots for the same deployment. Deduplicate the entire opaque `event_id`;
 do not parse it into a fixed number of colon-delimited fields.
 
@@ -43,7 +52,7 @@ and therefore must be namespaced by the operator's instance label.
   ],
   "properties": {
     "schema_version": { "const": "2.0.0" },
-    "strategy_version": { "const": "7.5.2" },
+    "strategy_version": { "const": "7.5.3" },
     "event_id": { "type": "string", "minLength": 1 },
     "instance_id": { "type": "string", "minLength": 1 },
     "configuration_id": { "type": "string", "minLength": 1 },

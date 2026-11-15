@@ -1,10 +1,13 @@
-# Futures V7.5.2 — End-User Guide
+# Futures V7.5.3 — End-User Guide
 
-Unreleased hardening changes are documented in [HARDENING_VALIDATION.md](HARDENING_VALIDATION.md).
-Candles spanning local midnight cannot submit new entries. Alert Instance ID
-must contain 1–64 ASCII letters, digits, underscores, or hyphens. Recreate alerts
-after changing the source or inputs. Hosted compilation and execution validation
-of these draft changes remains pending.
+This release candidate packages the validated lifecycle and session fixes. See
+[release notes and migration](RELEASE_NOTES.md) and
+[validation evidence](HARDENING_VALIDATION.md). Candles spanning local midnight
+cannot submit new entries. Alert Instance ID accepts 1-64 ASCII letters,
+digits, underscores or hyphens. Recreate saved alerts when adopting this version.
+The prior source revisions completed hosted tests; the version-renamed release
+candidate is checked locally and has not been separately compiled in TradingView.
+External receiver and live delivery testing remain unverified.
 
 ## 1. What this strategy is
 
@@ -36,7 +39,7 @@ session filter changing from false to true could incorrectly look like a new
 technical setup. Conversely, a genuine technical transition could be rejected
 forever because a temporary execution gate was closed on that exact bar.
 
-V7.5.2 uses a staged pipeline:
+V7.5.3 uses a staged pipeline:
 
 1. calculate the technical scores;
 2. identify a directional technical transition;
@@ -54,20 +57,20 @@ gating; it does not authorize entries after the technical premise disappears.
 
 Even with closing-tick processing, an absolute stop calculated around the signal
 close can differ from its intended distance when modeled slippage changes the
-fill. V7.5.2 stores the confirmed ATR distance in ticks and supplies it to
+fill. V7.5.3 stores the confirmed ATR distance in ticks and supplies it to
 `strategy.exit` as relative `loss` and `profit` values. The displayed stop and
 target are calculated only after the emulator reports the actual average fill.
 
 ### Minimum-size overrides could undermine safety limits
 
-V7.5.2 distinguishes the optional account-risk override from hard limits. Turning
+V7.5.3 distinguishes the optional account-risk override from hard limits. Turning
 off `Skip Trade When Minimum Size Exceeds Risk` can permit the configured minimum
 quantity to exceed the normal per-trade percentage budget. It **cannot** bypass
 the enabled remaining-daily-loss-capacity limit or notional-exposure limit.
 
 ### Session settings require compatible chart bars
 
-A narrow session window works only if a chart bar opens inside it. V7.5.2 therefore
+A narrow session window works only if a chart bar opens inside it. V7.5.3 therefore
 adds an enabled-by-default local-time cutoff fallback that triggers on the first
 confirmed bar at or after the cutoff. It also rejects synthetic charts,
 non-time-based charts, non-intraday charts, and timeframes above a configured
@@ -358,7 +361,7 @@ own cutoff.
 
 - **Alert Instance ID** must be nonblank and unique per account/deployment.
   Change it after changing Strategy Properties. All behavior inputs also enter
-  the canonical configuration token. V7.5.2 uses schema **2.0.0** with required
+  the canonical configuration token. V7.5.3 uses schema **2.0.0** with required
   `instance_id` and `configuration_id`; update receivers and recreate alerts.
   See [migration and identity rules](ALERT_SCHEMA.md).
 
@@ -457,7 +460,7 @@ bars. A “bar” is not a fixed unit of elapsed time across timeframes.
 
 ## 8. Pre-use checklist
 
-- [ ] Pine Editor compiles the unmodified V7.5.2 source.
+- [ ] Pine Editor compiles the unmodified V7.5.3 source.
 - [ ] Chart is standard, time-based, intraday, and within the maximum timeframe.
 - [ ] Exact contract or continuous-contract methodology is documented.
 - [ ] Tick size and point value match the exchange contract specification.
@@ -480,7 +483,7 @@ intrabar daily-loss threshold, gap price, partial fill, or live liquidation
 price. TradingView's Pine compiler and broker emulator are authoritative for
 actual script behavior.
 
-## Unreleased session-alignment correction (November 11, 2026)
+## Session alignment in V7.5.3
 
 Entry-session membership uses the actual candle opening minute and the calendar
 end of the configured session. A 10:00-11:00 hourly candle can therefore fit a

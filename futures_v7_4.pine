@@ -1,7 +1,7 @@
 //@version=6
 strategy(
-     title = "AI Futures Strategy - Version 7.4.1 Safety",
-     shorttitle = "Fut V7.4.1",
+     title = "AI Futures Strategy - Version 7.4.2 Safety",
+     shorttitle = "Fut V7.4.2",
      overlay = true,
      initial_capital = 100000,
      currency = currency.USD,

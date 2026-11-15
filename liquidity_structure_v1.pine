@@ -1,5 +1,5 @@
 //@version=6
-indicator("Liquidity + Structure Monitor v1.1", shorttitle = "LSM v1.1", overlay = true, max_lines_count = 100)
+indicator("Liquidity + Structure Monitor v1.1.1", shorttitle = "LSM v1.1.1", overlay = true, max_lines_count = 100)
 
 // Signal research only. No orders, fills, position accounting, or macro feed.
 // Pivots become eligible on their confirmation bar; markers are never backdated.
@@ -266,8 +266,8 @@ plotshape(shortSignal, "Short confirmed", shape.labeldown, location.abovebar, co
 plot(referenceEntry, "Latest signal close", display = display.data_window)
 plot(referenceStop, "Latest reference stop", display = display.data_window)
 plot(referenceTarget, "Latest reference target", display = display.data_window)
-alertcondition(longSignal, "Long: sweep + structure", 'LSM v1.1 LONG {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
-alertcondition(shortSignal, "Short: sweep + structure", 'LSM v1.1 SHORT {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
+alertcondition(longSignal, "Long: sweep + structure", 'LSM v1.1.1 LONG {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
+alertcondition(shortSignal, "Short: sweep + structure", 'LSM v1.1.1 SHORT {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
 
 string corner = panelCorner == "Top left" ? position.top_left : panelCorner == "Bottom left" ? position.bottom_left : panelCorner == "Bottom right" ? position.bottom_right : position.top_right
 string textSize = panelSize == "Large" ? size.large : panelSize == "Normal" ? size.normal : size.small
@@ -277,7 +277,7 @@ panelRow(int row, string key, string value, color ink) =>
     table.cell(panel, 1, row, value, text_color = ink, text_size = textSize, text_halign = text.align_left)
 if barstate.islast
     if showPanel
-        panelRow(0, "LSM v1.1 | " + timeframe.period, state, longSignal ? color.aqua : shortSignal ? color.orange : color.white)
+        panelRow(0, "LSM v1.1.1 | " + timeframe.period, state, longSignal ? color.aqua : shortSignal ? color.orange : color.white)
         panelRow(1, "Context " + contextTf, useHtf ? (contextDirection == 1 ? "BULLISH" : contextDirection == -1 ? "BEARISH" : "MIXED / UNREADY") + " | completed bar" : "Filter off", color.silver)
         panelRow(2, "Session / " + zone, useSession ? signalSession + " | " + (inSession ? "INSIDE" : "OUTSIDE") : "All chart hours", color.silver)
         panelRow(3, "Armed / age", armedDirection == 0 ? "None" : (armedDirection == 1 ? "LONG | " : "SHORT | ") + str.tostring(bar_index - armedBar) + "/" + str.tostring(validityBars), color.yellow)

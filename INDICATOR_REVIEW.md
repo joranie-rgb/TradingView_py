@@ -1,8 +1,9 @@
-# Liquidity + Structure Monitor v1.1
+# Liquidity + Structure Monitor v1.1.1
 
-## Current maintenance release
+## Current patch release candidate
 
-LSM v1.1 fixes opening-bar sweep suppression, two-sided penetration checks,
+LSM v1.1.1 adds the validated hourly session-alignment correction and retains
+the earlier fixes for opening-bar sweep suppression, two-sided penetration checks,
 target rounding, live cancellation diagnostics, and structure-line continuity.
 See [all 14 review fixes and validation limits](REVIEW_FIXES.md). Historical
 screenshot findings below refer to the original repository snapshot.
@@ -40,7 +41,7 @@ pixels. The new indicator does not reproduce those macro/evidence features.
    zero. Verify actual Strategy Properties and symbol metadata before attributing
    the empty report to a signal bug. The source also declares 100% margin.
 6. The original V7.5 session check tested only whether session-generated opening
-   and closing timestamps existed. V7.5.2, V7.4.1, and this indicator explicitly
+   and closing timestamps existed. V7.5.3, V7.4.2, and this indicator explicitly
    compare actual endpoints, excluding partial session-boundary bars.
 7. V7.5 can emit an entry `alert()` and an order-fill alert. Selecting both event
    types requires receiver deduplication. This indicator uses two selectable

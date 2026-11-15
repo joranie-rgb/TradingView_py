@@ -43,7 +43,7 @@ class HostedFixtureSync(unittest.TestCase):
     def test_title_drift_fails_before_any_fixture_is_written(self):
         builder = load_builder()
         original_read = Path.read_text
-        title = 'indicator("Liquidity + Structure Monitor v1.1", shorttitle = "LSM v1.1"'
+        title = 'indicator("Liquidity + Structure Monitor v1.1.1", shorttitle = "LSM v1.1.1"'
         for replacement in ('indicator("Renamed', title + "\n" + title):
             def altered_read(path, **options):
                 text = original_read(path, **options)
