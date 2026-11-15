@@ -54,3 +54,11 @@ into Pine Editor on a standard one-minute chart. PASS checks version fields and
 the expected instance/configuration event prefix in native Pine; it does not
 send an alert or validate any receiver. See the
 [release checks and discovered escape defect](RELEASE_CHECKS_2026-11-15.md).
+
+## Released layout and manual alert deployment
+
+The [November 15 deployment record](DEPLOYMENT_ALERTS_2026-11-15.md) documents
+removal of both old V7.4b chart instances, retained released scripts and monitors,
+and individual inspection of four Active manual-review alerts. It includes the
+cleaned-layout and active-alert screenshots, exact saved messages and channels,
+and the distinction between configuration verification and unverified delivery.
