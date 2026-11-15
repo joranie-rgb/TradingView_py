@@ -156,3 +156,8 @@ browser toasts were observed; the user confirmed mobile push and sound for
 each. V7.5.3 JSON parsed with correct versions and preserved identity. These
 are administrative events only: entry/fill delivery and both LSM directions
 remain unverified. See the ledger for screenshots, payload and pending cases.
+
+A subsequent November 15 check at 18:25 New York time found all four alerts
+Active, no log filters selected, and no newer LSM or strategy entry/fill events.
+The [live-delivery ledger](tests/hosted/LIVE_DELIVERY_2026-11-15.md) preserves
+follow-up log/status screenshots; pending delivery scopes are unchanged.
