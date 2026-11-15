@@ -145,3 +145,14 @@ See the [deployment and alert verification record](tests/hosted/DEPLOYMENT_ALERT
 for exact settings and screenshots. This later deployment created real manual
 notification alerts; the earlier compilation reports describe canceled drafts.
 Live delivery and external receiver testing remain **UNVERIFIED**.
+
+Live delivery observations are tracked separately in the
+[live-delivery ledger](tests/hosted/LIVE_DELIVERY_2026-11-15.md). Active saved
+configuration and historical alert logs are not evidence of current delivery.
+
+On November 15, the live observation window captured V7.5.3 SESSION_EXIT at
+18:01 and V7.4.2 SESSION_EXIT at 18:05 New York time. Both log entries and
+browser toasts were observed; the user confirmed mobile push and sound for
+each. V7.5.3 JSON parsed with correct versions and preserved identity. These
+are administrative events only: entry/fill delivery and both LSM directions
+remain unverified. See the ledger for screenshots, payload and pending cases.

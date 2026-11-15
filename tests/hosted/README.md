@@ -62,3 +62,10 @@ removal of both old V7.4b chart instances, retained released scripts and monitor
 and individual inspection of four Active manual-review alerts. It includes the
 cleaned-layout and active-alert screenshots, exact saved messages and channels,
 and the distinction between configuration verification and unverified delivery.
+
+## Live manual-notification observation
+
+The [live-delivery ledger](LIVE_DELIVERY_2026-11-15.md) separates current
+replacement-alert events from historical log entries, and records trigger,
+browser toast, user-confirmed mobile push and sound evidence independently.
+Pending alerts are not counted as delivery passes or failures.
