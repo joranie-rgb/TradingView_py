@@ -41,4 +41,6 @@ sentinel tests lifecycle handling; it is not a test of every production bracket
 or liquidation path. First-bar helper cases are synthetic Pine assertions;
 observed chart transitions and emulator orders are historical hosted execution.
 Neither fixture is Bar Replay playback, live forward testing or external
-receiver validation. See [recorded results](RESULTS_2026-11-11.md).
+receiver validation. See the [November 11 lifecycle results](RESULTS_2026-11-11.md)
+and [November 15 hosted chart-guard results](RESULTS_2026-11-15.md), including
+rejection and recovery screenshots and a structured verification record.

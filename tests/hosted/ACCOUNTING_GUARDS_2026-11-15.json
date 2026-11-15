@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-15",
+  "repository_commit": "908d95d0d6e0ae9bd0f676b601907577c78f6483",
+  "fixture": "tests/hosted/accounting_reconciliation.pine",
+  "fixture_sha256_bytes": "476f0d9fc4f139a7a04d62cc10119ffbe69d60931a321ff0e62910e09159dd55",
+  "fixture_sha256_utf8_lf": "8ce342a2774c3ce4f34f6d588e426b4f9fac4a71097a827889d8d2a30fe67f5d",
+  "host": "TradingView Pine v6 broker emulator",
+  "anchor": "2026-11-10 23:57 America/New_York (unchanged fixture default)",
+  "history": "November 1-13, 2026",
+  "valid_context": {
+    "symbol": "CME_MINI:MNQ1!",
+    "timeframe": "1 minute",
+    "style": "Candles",
+    "session": "Electronic trading hours",
+    "back_adjustment": true
+  },
+  "cases": [
+    {
+      "context": "Standard MNQ 1 minute",
+      "result": "PASS",
+      "entries": 2,
+      "partial_exits": 1,
+      "full_exits": 2,
+      "closed_records": 3,
+      "gross_usd": 28,
+      "commission_usd": 25,
+      "net_usd": 3,
+      "emulator_net_usd": 3,
+      "screenshot": "evidence/accounting-guards-valid-nov15.jpg"
+    },
+    {
+      "context": "Standard MNQ 5 minutes",
+      "result": "REJECTED_ON_BAR_0",
+      "screenshot": "evidence/accounting-guard-5m-nov15.jpg"
+    },
+    {
+      "context": "Heikin Ashi MNQ 1 minute",
+      "result": "REJECTED_ON_BAR_0",
+      "screenshot": "evidence/accounting-guard-heikin-ashi-nov15.jpg"
+    },
+    {
+      "context": "Standard CME_MINI:NQ1! 1 minute",
+      "result": "REJECTED_ON_BAR_0",
+      "screenshot": "evidence/accounting-guard-nq-nov15.jpg"
+    },
+    {
+      "context": "Restored standard MNQ 1 minute",
+      "result": "RECOVERED_PASS",
+      "closed_records": 3,
+      "emulator_net_usd": 3,
+      "screenshot": "evidence/accounting-guard-recovery-nov15.jpg"
+    }
+  ],
+  "rejection_message": "Error on bar 0: Use standard one-minute MNQ candles (USD, point value 2, tick 0.25); select ETH manually",
+  "limits": [
+    "Currency, point value and tick size were not independently falsified while holding all other metadata constant; local unit tests cover each conjunct.",
+    "ETH, back adjustment and Properties overrides remain manual prerequisites.",
+    "Historical emulator run only; external receiver and live delivery remain unverified."
+  ],
+  "cleanup": "Removed temporary HOSTED Ledger instance; restored MNQ one-minute hollow candles, original two-chart split, visible Morning Thesis monitor, watchlist and original strategy report.",
+  "alerts_or_broker_orders_created": false,
+  "execution_modified_repository": false,
+  "fixture_sha256_bytes_note": "Original Windows checkout bytes; use the UTF-8 LF-normalized digest to compare across checkouts."
+}
