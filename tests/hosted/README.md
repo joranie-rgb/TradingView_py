@@ -5,6 +5,8 @@ copies the indicator state machine and the strategy's observation/reset/counting
 block directly from production, records SHA256 digests (UTF-8, LF-normalized),
 and fails if expected source anchors disappear. Checked-in generated files are
 verified by the local test suite. Regenerate after changing production sources.
+The title instrumentation must match exactly once; renamed or duplicated title
+anchors abort generation before either fixture is written.
 
 In TradingView Pine Editor, paste each generated `.pine` file into an isolated
 untitled draft. Use CME_MINI:MNQ1!, standard one-minute candles, Electronic
@@ -29,6 +31,9 @@ fixtures for trading.
   PASS requires two observed entries, one partial, two full exits, three closed
   records and gross less all commissions equal to emulator net within one cent.
   It also checks partial/full cooldown and previous-valuation midnight reset.
+  The first-bar environment guard rejects synthetic candles, other intervals,
+  non-MNQ roots, non-USD symbols, and unexpected point/tick values. ETH selection,
+  back adjustment and strategy Properties still require manual verification.
 
 The accounting fixture copies production observation logic, but deliberately
 replaces signal selection and brackets with controlled test orders. Its `plan`

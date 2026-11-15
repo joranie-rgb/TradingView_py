@@ -11,6 +11,13 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(__file__).resolve().parent
 
 
+def replace_once(source, old, new):
+    """Reject stale or ambiguous instrumentation anchors before writing files."""
+    if source.count(old) != 1:
+        raise ValueError(f"Expected exactly one source anchor: {old}")
+    return source.replace(old, new, 1)
+
+
 def helper(source, name):
     match = re.search(rf"^{name}\([^\n]*\) =>\n(?:    [^\n]*\n)+", source, re.M)
     if not match:
@@ -23,8 +30,8 @@ def build():
     strategy = (ROOT / "futures_v7_5.pine").read_text(encoding="utf-8")
     digest = lambda text: hashlib.sha256(text.encode()).hexdigest()
     indicator_digest = digest(indicator)
-    indicator = indicator.replace('indicator("Liquidity + Structure Monitor v1.1", shorttitle = "LSM v1.1"',
-                                  'indicator("HOSTED Indicator lifecycle audit", shorttitle = "HOSTED LSM"', 1)
+    indicator = replace_once(indicator, 'indicator("Liquidity + Structure Monitor v1.1", shorttitle = "LSM v1.1"',
+                                  'indicator("HOSTED Indicator lifecycle audit", shorttitle = "HOSTED LSM"')
     anchor = "// Values above describe the setup entering this bar."
     if indicator.count(anchor) != 1:
         raise ValueError("Indicator transition anchor changed")
@@ -108,8 +115,9 @@ strategy("HOSTED Accounting reconciliation", shorttitle="HOSTED Ledger", overlay
  calc_on_every_tick=false, margin_long=100, margin_short=100)
 string sessionTimezone = "America/New_York"
 int anchor = input.time(timestamp("10 Nov 2026 23:57 -0500"), "First order bar open")
-if barstate.isfirst and timeframe.in_seconds() != 60
-    runtime.error("Use standard MNQ one-minute ETH candles")
+bool auditChartSupported = chart.is_standard and timeframe.in_seconds() == 60 and syminfo.root == "MNQ" and syminfo.currency == "USD" and syminfo.pointvalue == 2 and syminfo.mintick == 0.25
+if barstate.isfirst and not auditChartSupported
+    runtime.error("Use standard one-minute MNQ candles (USD, point value 2, tick 0.25); select ETH manually")
 '''
     accounting += "\n".join(helper(strategy, name) for name in names)
     accounting += '''

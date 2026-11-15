@@ -41,7 +41,7 @@ emulator evidence, not an independently sampled midnight broker balance.
 ## Local evidence
 
 Run `python -B -m unittest discover -s tests -v` and `git diff --check`.
-The current suite has 55 passing tests. New coverage includes New York midnight,
+The current suite has 58 passing tests. New coverage includes New York midnight,
 spring and fall daylight-saving changes, repeated local hours, partial/full exit
 sequences, missing currency conversion, reset baselines, date-spanning candles,
 payload identity and expiration, and explicit evaluator failures.

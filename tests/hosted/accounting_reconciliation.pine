@@ -6,8 +6,9 @@ strategy("HOSTED Accounting reconciliation", shorttitle="HOSTED Ledger", overlay
  calc_on_every_tick=false, margin_long=100, margin_short=100)
 string sessionTimezone = "America/New_York"
 int anchor = input.time(timestamp("10 Nov 2026 23:57 -0500"), "First order bar open")
-if barstate.isfirst and timeframe.in_seconds() != 60
-    runtime.error("Use standard MNQ one-minute ETH candles")
+bool auditChartSupported = chart.is_standard and timeframe.in_seconds() == 60 and syminfo.root == "MNQ" and syminfo.currency == "USD" and syminfo.pointvalue == 2 and syminfo.mintick == 0.25
+if barstate.isfirst and not auditChartSupported
+    runtime.error("Use standard one-minute MNQ candles (USD, point value 2, tick 0.25); select ETH manually")
 riskDayStamp(int barTime) =>
     timestamp(sessionTimezone, year(barTime, sessionTimezone), month(barTime, sessionTimezone), dayofmonth(barTime, sessionTimezone), 0, 0)
 
