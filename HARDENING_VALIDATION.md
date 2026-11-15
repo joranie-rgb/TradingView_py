@@ -55,11 +55,20 @@ The bounded test evaluator executes selected source expressions and straight-lin
 serialization helpers. It is not Pine, a full script interpreter, a security
 sandbox, an order simulator, or a historical/live equivalence proof.
 
-## Acceptance scope after November 11
+## Acceptance scope after November 15
 
 Hosted historical lifecycle assertions and forced-order accounting reconciliation
 are recorded in [the hosted test report](tests/hosted/RESULTS_2026-11-11.md).
 The run found and corrected hourly session alignment in all three scripts.
+The [November 15 guard-test report](tests/hosted/RESULTS_2026-11-15.md) records
+hosted compilation of the updated accounting fixture, rejection of five-minute
+MNQ, one-minute Heikin Ashi MNQ and one-minute NQ on bar zero, and recovery on
+standard one-minute MNQ. The valid and recovered runs reconciled USD 28.00 gross
+less USD 25.00 commission to USD 3.00 emulator net across three closed records.
+Screenshots and a portable source digest accompany the report. Currency, point
+value and tick-size guards retain independent local coverage; those metadata
+fields were not individually falsified in the hosted run.
+
 Local checks, hosted source compilation and the final repository audit are
 complete for this patch. Script versions remain unreleased; this PR is not a
 published script release.

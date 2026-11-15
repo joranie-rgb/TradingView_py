@@ -89,5 +89,7 @@ substitute for trade-by-trade emulator validation.
 
 The [November 11 report](tests/hosted/RESULTS_2026-11-11.md) records hosted
 assertions, individual emulator fills, the hourly session fix, and test limits.
+The [November 15 guard-test report](tests/hosted/RESULTS_2026-11-15.md) adds
+hosted acceptance, rejection and recovery results with screenshots.
 [Reproducible fixtures](tests/hosted/README.md) are isolated from production
 alerts and use source digests. External receiver testing is **UNVERIFIED**.
