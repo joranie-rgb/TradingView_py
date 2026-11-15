@@ -1,0 +1,22 @@
+{
+  "schema_version": "2.0.0",
+  "strategy_version": "7.5.3",
+  "event_id": "7.5.3:research-1:true|true|9|21|3|0.1|14|52|80|20|48|12|26|9|14|0.05|false|20|1|7|true|3|5|0.5|1.5|2|1|10|true|2|5|true|100|true|true|true|3|Percent|1.5|1500|true|true|true|true|10|true|America/New_York|true|0930-1545|true|1550-1555|true|15|50|true|true|true|60|false|1577836800000|4102444740000:={\"backadjustment\":\"default\",\"settlement-as-close\":true,\"symbol\":\"CME_MINI:MNQ1!\"}:1:1794783660000:SESSION_EXIT",
+  "instance_id": "research-1",
+  "configuration_id": "true|true|9|21|3|0.1|14|52|80|20|48|12|26|9|14|0.05|false|20|1|7|true|3|5|0.5|1.5|2|1|10|true|2|5|true|100|true|true|true|3|Percent|1.5|1500|true|true|true|true|10|true|America/New_York|true|0930-1545|true|1550-1555|true|15|50|true|true|true|60|false|1577836800000|4102444740000",
+  "event": "SESSION_EXIT",
+  "symbol": "MNQ1!",
+  "exchange": "CME_MINI",
+  "timeframe": "1",
+  "signal_timestamp": 1794783660000,
+  "expiration_timestamp": 1794783660000,
+  "action": "EXIT",
+  "direction": "FLAT",
+  "quantity": 0,
+  "planned_bracket_ticks": {
+    "stop": null,
+    "target": null
+  },
+  "risk_day_id": 1794718800000,
+  "administrative_reason": "SESSION_CUTOFF"
+}
