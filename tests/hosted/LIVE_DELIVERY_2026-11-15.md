@@ -115,3 +115,35 @@ PENDING, not failed. User confirmation supports push and sound receipt for the
 two strategy events only. No exact transport latency or device-specific sound
 path can be inferred. No alert settings, source inputs or chart intervals were
 changed, and no broker order or webhook request was submitted by this check.
+
+## Follow-up: November 15, 2026, 18:25 America/New_York
+
+Both chart headers showed Market open. The current visible log contained only
+the two replacement SESSION_EXIT events already verified at 18:01 (V7.5.3)
+and 18:05 (V7.4.2), followed by older historical records. No new LSM LONG, LSM
+SHORT, strategy entry-intent or order-fill event was observed in this check.
+The initially opened Log pane briefly appeared empty while loading; the log
+populated before assessment. No records were cleared.
+
+The Log Options menu was inspected: Current symbol, Current time interval,
+Price, Technicals and Watchlist were all unchecked. No filter was changed. The
+Alerts list then showed all four replacement alerts Active; latest-trigger
+times remained 18:01 and 18:05 for the strategies, while both LSM alerts had no
+trigger time displayed. This provides a bounded UI observation, not a guarantee
+that no event could occur after the check. Screenshot filenames use 1826 as a
+follow-up identifier; the UI checks and captures occurred around 18:25
+New York time.
+
+![Follow-up log: no new qualifying events](evidence/tradingview-followup-log-1826.jpg)
+![Follow-up: all four replacement alerts remain Active](evidence/tradingview-followup-active-1826.jpg)
+
+No new browser toast or expanded live message was observed, and no new mobile
+push or sound receipt was reported for an LSM or entry/fill event. Earlier user
+confirmations remain specific to the two SESSION_EXIT notifications. Thus the
+results ledger is unchanged: LSM LONG/SHORT delivery stays PENDING; strategy
+entry/fill delivery and order-fill placeholder expansion stay UNVERIFIED.
+
+This Sunday evening check is outside the configured 09:30–15:45 strategy-entry
+window and weekday 09:30–16:00 LSM signal window. Market open alone does not
+make these signal conditions eligible. No filters, source inputs, alert
+settings, chart intervals or broker connections were changed to force events.
