@@ -1,0 +1,64 @@
+//@version=6
+// Production source SHA256 (UTF-8 LF): e21e82f3fc3a8e96aead9c6158d25a20b986d324615fb01d13ac60d1875cf3a6
+// Standalone helper probe only; no orders or alerts are created.
+indicator("HOSTED Fixed message check", shorttitle="Msg check", overlay=true)
+string alertInstanceId = "release-check"
+string configurationId = "fixed-fixture"
+int currentRiskDay = time
+eventIdentity(string instanceId, string configId, string tickerId, string chartTf, int submittedAt, string eventName) =>
+    "7.5.3:" + instanceId + ":" + configId + ":" + tickerId + ":" + chartTf + ":" + str.tostring(submittedAt) + ":" + eventName
+
+jsonIntOrNull(int value) =>
+    na(value) ? "null" : str.tostring(value)
+
+jsonNumberOrNull(float value) =>
+    na(value) ? "null" : str.tostring(value)
+
+jsonString(string value) =>
+    string escaped = str.replace_all(value, "\\", "\\\\")
+    escaped := str.replace_all(escaped, "\"", "\\\"")
+    escaped := str.replace_all(escaped, "\n", "\\n")
+    // Pine does not support a carriage-return string escape: it becomes r.
+    // Match the actual U+000D character through the regex engine instead.
+    string carriageReturn = str.match(escaped, "\\x0D")
+    escaped := str.length(carriageReturn) > 0 ? str.replace_all(escaped, carriageReturn, "\\r") : escaped
+    escaped := str.replace_all(escaped, "\t", "\\t")
+    "\"" + escaped + "\""
+
+alertPayload(string eventName, string action, string direction, float quantity, int bracketStopTicks, int bracketTargetTicks, int signalTimestamp, int submissionTimestamp, int expirationTimestamp, string administrativeReason) =>
+    string eventIdentifier = eventIdentity(alertInstanceId, configurationId, syminfo.tickerid, timeframe.period, submissionTimestamp, eventName)
+    string payload = "{"
+    payload := payload + "\"schema_version\":\"2.0.0\","
+    payload := payload + "\"strategy_version\":\"7.5.3\","
+    payload := payload + "\"event_id\":" + jsonString(eventIdentifier) + ","
+    payload := payload + "\"instance_id\":" + jsonString(alertInstanceId) + ","
+    payload := payload + "\"configuration_id\":" + jsonString(configurationId) + ","
+    payload := payload + "\"event\":" + jsonString(eventName) + ","
+    payload := payload + "\"symbol\":" + jsonString(syminfo.ticker) + ","
+    payload := payload + "\"exchange\":" + jsonString(syminfo.prefix) + ","
+    payload := payload + "\"timeframe\":" + jsonString(timeframe.period) + ","
+    payload := payload + "\"signal_timestamp\":" + jsonIntOrNull(signalTimestamp) + ","
+    payload := payload + "\"expiration_timestamp\":" + jsonIntOrNull(expirationTimestamp) + ","
+    payload := payload + "\"action\":" + jsonString(action) + ","
+    payload := payload + "\"direction\":" + jsonString(direction) + ","
+    payload := payload + "\"quantity\":" + jsonNumberOrNull(quantity) + ","
+    payload := payload + "\"planned_bracket_ticks\":{\"stop\":" + jsonIntOrNull(bracketStopTicks) + ",\"target\":" + jsonIntOrNull(bracketTargetTicks) + "},"
+    payload := payload + "\"risk_day_id\":" + jsonIntOrNull(currentRiskDay) + ","
+    payload := payload + "\"administrative_reason\":" + (administrativeReason == "" ? "null" : jsonString(administrativeReason))
+    payload := payload + "}"
+    payload
+
+string sample = alertPayload("LONG_ENTRY", "ENTER", "LONG", 2, 10, 20, time, time, time_close, "")
+bool verified = str.contains(sample, '"strategy_version":"7.5.3"') and str.contains(sample, '"schema_version":"2.0.0"') and str.contains(sample, '"event_id":"7.5.3:release-check:fixed-fixture:')
+if not verified
+    runtime.error("Release JSON version/identity check failed")
+var table audit = table.new(position.bottom_left, 2, 4, bgcolor=color.black)
+if barstate.islastconfirmedhistory or barstate.islast
+    table.cell(audit, 0, 0, "NATIVE JSON CHECK", text_color=color.white)
+    table.cell(audit, 1, 0, verified ? "PASS" : "FAIL", text_color=color.lime)
+    table.cell(audit, 0, 1, "Strategy version", text_color=color.white)
+    table.cell(audit, 1, 1, "7.5.3", text_color=color.white)
+    table.cell(audit, 0, 2, "Schema version", text_color=color.white)
+    table.cell(audit, 1, 2, "2.0.0", text_color=color.white)
+    table.cell(audit, 0, 3, "Event ID prefix", text_color=color.white)
+    table.cell(audit, 1, 3, "7.5.3:release-check:", text_color=color.white)

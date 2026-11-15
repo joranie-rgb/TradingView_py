@@ -5,6 +5,20 @@ from test_review_regressions import Decisions, translate, STRATEGIES
 
 
 class EvaluatorContract(unittest.TestCase):
+    def test_pine_string_escapes_do_not_use_python_carriage_return_semantics(self):
+        engine = Decisions('')
+        self.assertEqual(engine.expression(r'"\r"'), 'r')
+        self.assertEqual(engine.expression(r'"\n\t"'), '\n\t')
+        self.assertEqual(engine.expression(r'"\\r"'), '\\r')
+        self.assertEqual(engine.expression(r'"\\x0D"'), r'\x0D')
+
+    def test_regex_support_is_limited_to_the_production_control_character(self):
+        engine = Decisions('')
+        self.assertEqual(engine.expression(r'str.match(value, "\\x0D")', value='r\rr'), '\r')
+        self.assertEqual(engine.expression(r'str.match(value, "\\x0D")', value='research'), '')
+        with self.assertRaisesRegex(ValueError, 'Unsupported Pine regex'):
+            engine.expression('str.match("r", ".*")')
+
     def test_unclosed_group_has_explicit_diagnostic(self):
         with self.assertRaisesRegex(ValueError, 'Unclosed parenthesis'):
             translate('math.max(1, 2')

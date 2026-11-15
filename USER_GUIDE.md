@@ -5,8 +5,9 @@ This release candidate packages the validated lifecycle and session fixes. See
 [validation evidence](HARDENING_VALIDATION.md). Candles spanning local midnight
 cannot submit new entries. Alert Instance ID accepts 1-64 ASCII letters,
 digits, underscores or hyphens. Recreate saved alerts when adopting this version.
-The prior source revisions completed hosted tests; the version-renamed release
-candidate is checked locally and has not been separately compiled in TradingView.
+The release sources completed [hosted compilation and message checks](tests/hosted/RELEASE_CHECKS_2026-11-15.md).
+The final checks found and corrected JSON identity corruption; use the corrected
+source from this PR once merged.
 External receiver and live delivery testing remain unverified.
 
 ## 1. What this strategy is

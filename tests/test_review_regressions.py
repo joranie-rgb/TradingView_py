@@ -41,8 +41,32 @@ def top_level(text, target):
     return -1
 
 
+def pine_literals(expression):
+    """Preserve supported Pine escapes; unsupported escapes keep the letter."""
+    result, quote, i = [], None, 0
+    while i < len(expression):
+        char = expression[i]
+        if quote and char == "\\" and i + 1 < len(expression):
+            following = expression[i + 1]
+            result.append(char + following if following in "nt\\\"'" else following)
+            i += 2
+            continue
+        if char in "\"'":
+            quote = None if quote == char else char if quote is None else quote
+        result.append(char)
+        i += 1
+    return "".join(result)
+
+
+def pine_match(value, pattern):
+    """Only the production carriage-return regex is in this evaluator's scope."""
+    if pattern != r"\x0D":
+        raise ValueError("Unsupported Pine regex: " + pattern)
+    return "\r" if "\r" in value else ""
+
+
 def translate(expression):
-    expression = expression.strip()
+    expression = pine_literals(expression.strip())
     # Translate parenthesized subexpressions too, including a conditional used
     # as one string-concatenation operand. Preserve quoted message punctuation.
     rebuilt, i, quote, escaped = [], 0, None, False
@@ -124,7 +148,8 @@ class Decisions:
             "strategy": SimpleNamespace(convert_to_account=lambda value: value * fx),
             "str": SimpleNamespace(tostring=pine_string, replace_all=lambda value, old, new: value.replace(old, new),
                                    length=len, contains=lambda value, part: part in value,
-                                   substring=lambda value, start, end: value[start:end], tonumber=float),
+                                   substring=lambda value, start, end: value[start:end], tonumber=float,
+                                   match=pine_match),
             "sessionTimezone": "UTC",
             "hour": lambda value, zone: dt(value, zone).hour,
             "minute": lambda value, zone: dt(value, zone).minute,

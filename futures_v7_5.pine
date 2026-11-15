@@ -274,7 +274,10 @@ jsonString(string value) =>
     string escaped = str.replace_all(value, "\\", "\\\\")
     escaped := str.replace_all(escaped, "\"", "\\\"")
     escaped := str.replace_all(escaped, "\n", "\\n")
-    escaped := str.replace_all(escaped, "\r", "\\r")
+    // Pine does not support a carriage-return string escape: it becomes r.
+    // Match the actual U+000D character through the regex engine instead.
+    string carriageReturn = str.match(escaped, "\\x0D")
+    escaped := str.length(carriageReturn) > 0 ? str.replace_all(escaped, carriageReturn, "\\r") : escaped
     escaped := str.replace_all(escaped, "\t", "\\t")
     "\"" + escaped + "\""
 

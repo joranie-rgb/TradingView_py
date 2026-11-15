@@ -69,11 +69,15 @@ not a new hosted test run.
 
 Existing regression checks verify payload/schema consistency, source helper
 behavior, platform short-title limits and generated fixture synchronization.
-All 58 local tests pass. Version-string normalization reproduces the three
-pre-bump production sources exactly. The Word guide was rendered to seven
+All 62 local tests pass after the final serialization correction. Before that
+correction, version-string normalization reproduced the three pre-bump
+production sources exactly. The Word guide was rendered to seven
 pages and visually inspected; current guide versions, schema fields, 43 local
 root-document links and whitespace checks were verified.
-The renamed candidate sources have not been separately compiled in TradingView.
+The renamed candidate sources completed [final TradingView checks](tests/hosted/RELEASE_CHECKS_2026-11-15.md).
+A native probe found lowercase r corruption in the JSON escape helper. The
+correction passed native helper assertions and full-strategy compilation; it
+requires this correction PR to merge before it is present on main.
 This PR introduces no trading-performance optimization or profitability claim.
 
 External receiver testing, live delivery, Bar Replay equivalence and exhaustive

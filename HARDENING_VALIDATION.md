@@ -41,7 +41,7 @@ emulator evidence, not an independently sampled midnight broker balance.
 ## Local evidence
 
 Run `python -B -m unittest discover -s tests -v` and `git diff --check`.
-The current suite has 58 passing tests. New coverage includes New York midnight,
+The current suite has 62 passing tests. New coverage includes New York midnight,
 spring and fall daylight-saving changes, repeated local hours, partial/full exit
 sequences, missing currency conversion, reset baselines, date-spanning candles,
 payload identity and expiration, and explicit evaluator failures.
@@ -71,9 +71,9 @@ fields were not individually falsified in the hosted run.
 
 Local checks, hosted source compilation and the final repository audit are
 complete for the behavior patch. The [release candidate](RELEASE_NOTES.md)
-renames those validated sources to V7.5.3, V7.4.2 and LSM v1.1.1. The version
-changes are checked locally; these renamed sources have not been separately
-compiled in TradingView. Historical reports retain their tested versions and
+renames those validated sources to V7.5.3, V7.4.2 and LSM v1.1.1. The renamed sources completed [final hosted compilation and message checks](tests/hosted/RELEASE_CHECKS_2026-11-15.md).
+Those checks found an alert identity corruption defect in V7.5.3; the correction
+and successful native-helper/full-strategy reruns are documented there. Historical reports retain their tested versions and
 source digests. No GitHub Release or TradingView publication has been made.
 
 External receiver testing is **UNVERIFIED**. No receiver implementation or broker
