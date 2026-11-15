@@ -17,6 +17,17 @@ class AlertBoundaries(unittest.TestCase):
     def test_duplicate_intent_and_fill_payloads_preserve_identity(self):
         self.assertEqual(self.payload(),self.payload())
 
+    def test_lowercase_r_and_controls_round_trip_without_identity_corruption(self):
+        for value in ['research-1', 'release-check', 'true|America/New_York',
+                      'r\r\rr', 'r\n\t"\\r', '', 'ordinary text']:
+            with self.subTest(value=value):
+                self.assertEqual(json.loads(self.engine.call('jsonString', value)), value)
+        self.engine.environment.update(alertInstanceId='research-1', configurationId='true|research')
+        payload = self.payload()
+        self.assertEqual(payload['instance_id'], 'research-1')
+        self.assertEqual(payload['configuration_id'], 'true|research')
+        self.assertTrue(payload['event_id'].startswith('7.5.3:research-1:true|research:'))
+
     def test_account_and_configuration_changes_change_serialized_identity(self):
         first=self.payload()
         self.engine.environment['alertInstanceId']='account-2'

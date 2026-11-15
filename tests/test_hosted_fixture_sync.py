@@ -2,6 +2,8 @@
 import contextlib
 import importlib.util
 import io
+import hashlib
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -20,6 +22,18 @@ def load_builder():
 
 
 class HostedFixtureSync(unittest.TestCase):
+    def test_native_message_probe_matches_production_helpers(self):
+        source = (FOLDER.parent.parent / "futures_v7_5.pine").read_text(encoding="utf-8")
+        probe = (FOLDER / "release_message_check.pine").read_text(encoding="utf-8")
+        self.assertIn(hashlib.sha256(source.encode("utf-8")).hexdigest(), probe)
+        for name in ("eventIdentity", "jsonIntOrNull", "jsonNumberOrNull", "jsonString", "alertPayload"):
+            pattern = rf"^{name}\([^\n]*\) =>\n(?:    [^\n]*\n)+"
+            original = re.search(pattern, source, re.MULTILINE)
+            copied = re.search(pattern, probe, re.MULTILINE)
+            self.assertIsNotNone(original, name)
+            self.assertIsNotNone(copied, name)
+            self.assertEqual(original.group(), copied.group(), name)
+
     def test_generated_fixtures_match_production(self):
         builder = load_builder()
         generated = {}

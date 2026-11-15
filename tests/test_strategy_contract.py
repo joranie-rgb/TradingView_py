@@ -127,7 +127,8 @@ class StrategyContractTests(unittest.TestCase):
             ('str.replace_all(value, "\\\\", "\\\\\\\\")', "backslashes"),
             ('str.replace_all(escaped, "\\\"", "\\\\\\\"")', "double quotes"),
             ('str.replace_all(escaped, "\\n", "\\\\n")', "newlines"),
-            ('str.replace_all(escaped, "\\r", "\\\\r")', "carriage returns"),
+            ('str.match(escaped, "\\\\x0D")', "carriage return detection"),
+            ('str.replace_all(escaped, carriageReturn, "\\\\r")', "carriage returns"),
             ('str.replace_all(escaped, "\\t", "\\\\t")', "tabs"),
         ):
             with self.subTest(character=character):

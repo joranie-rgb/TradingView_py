@@ -1,0 +1,27 @@
+{
+  "raw_payload": "{\"schema_version\":\"2.0.0\",\"strategy_version\":\"7.5.3\",\"event_id\":\"7.5.3:\\release-check:fixed-fixtu\\re:={\\\"backadjustment\\\":\\\"default\\\",\\\"settlement-as-close\\\":t\\rue,\\\"symbol\\\":\\\"CME_MINI:MNQ1!\\\"}:1:1793574000000:LONG_ENTRY\",\"instance_id\":\"\\release-check\",\"configuration_id\":\"fixed-fixtu\\re\",\"event\":\"LONG_ENTRY\",\"symbol\":\"MNQ1!\",\"exchange\":\"CME_MINI\",\"timeframe\":\"1\",\"signal_timestamp\":1793574000000,\"expiration_timestamp\":1793574060000,\"action\":\"ENTER\",\"direction\":\"LONG\",\"quantity\":2,\"planned_bracket_ticks\":{\"stop\":10,\"target\":20},\"risk_day_id\":1793574000000,\"administrative_reason\":null}",
+  "decoded_payload": {
+    "schema_version": "2.0.0",
+    "strategy_version": "7.5.3",
+    "event_id": "7.5.3:\release-check:fixed-fixtu\re:={\"backadjustment\":\"default\",\"settlement-as-close\":t\rue,\"symbol\":\"CME_MINI:MNQ1!\"}:1:1793574000000:LONG_ENTRY",
+    "instance_id": "\release-check",
+    "configuration_id": "fixed-fixtu\re",
+    "event": "LONG_ENTRY",
+    "symbol": "MNQ1!",
+    "exchange": "CME_MINI",
+    "timeframe": "1",
+    "signal_timestamp": 1793574000000,
+    "expiration_timestamp": 1793574060000,
+    "action": "ENTER",
+    "direction": "LONG",
+    "quantity": 2,
+    "planned_bracket_ticks": {
+      "stop": 10,
+      "target": 20
+    },
+    "risk_day_id": 1793574000000,
+    "administrative_reason": null
+  },
+  "expected_instance_id": "release-check",
+  "expected_configuration_id": "fixed-fixture"
+}
