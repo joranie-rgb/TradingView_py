@@ -30,7 +30,7 @@ def build():
     strategy = (ROOT / "futures_v7_5.pine").read_text(encoding="utf-8")
     digest = lambda text: hashlib.sha256(text.encode()).hexdigest()
     indicator_digest = digest(indicator)
-    indicator = replace_once(indicator, 'indicator("Liquidity + Structure Monitor v1.1", shorttitle = "LSM v1.1"',
+    indicator = replace_once(indicator, 'indicator("Liquidity + Structure Monitor v1.1.1", shorttitle = "LSM v1.1.1"',
                                   'indicator("HOSTED Indicator lifecycle audit", shorttitle = "HOSTED LSM"')
     anchor = "// Values above describe the setup entering this bar."
     if indicator.count(anchor) != 1:

@@ -1,9 +1,10 @@
 # Review fixes for the futures scripts
 
-This release addresses the 14 findings reviewed at commit `1151359`.
-Source filenames remain stable: `futures_v7_5.pine` is now **V7.5.2**,
-`futures_v7_4.pine` is compatibility **V7.4.1**, and
-`liquidity_structure_v1.pine` is **LSM v1.1**.
+This release candidate packages the 14 findings reviewed at commit `1151359`
+and the subsequent lifecycle/session fixes in [the release notes](RELEASE_NOTES.md).
+Source filenames remain stable: `futures_v7_5.pine` is now **V7.5.3**,
+`futures_v7_4.pine` is compatibility **V7.4.2**, and
+`liquidity_structure_v1.pine` is **LSM v1.1.1**.
 
 ## Resolution matrix
 
@@ -27,7 +28,7 @@ Source filenames remain stable: `futures_v7_5.pine` is now **V7.5.2**,
 ## Migration
 
 - Recompile the complete scripts and recreate alerts after source/input changes.
-- V7.5.2 requires alert **schema 2.0.0**. Migrate receivers before creating the
+- V7.5.3 requires alert **schema 2.0.0**. Migrate receivers before creating the
   new alerts; `instance_id` and `configuration_id` are required. Treat event IDs
   as opaque strings. See [the schema and migration guide](ALERT_SCHEMA.md).
 - Set **Alert Instance ID** uniquely per account/deployment. Change it after

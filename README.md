@@ -1,10 +1,12 @@
 # TradingView Futures Scripts
 
-This repository contains the LSM v1.1 indicator and V7.5.2 strategy, with a
-V7.4.1 compatibility strategy, in Pine Script v6. The strategy researches
+This repository contains the LSM v1.1.1 indicator and V7.5.3 strategy, with a
+V7.4.2 compatibility strategy, in Pine Script v6. The strategy researches
 directional futures entries. It combines EMA, MACD, RSI, ATR, and optional
 relative-volume signals with fill-relative brackets, equity-based sizing, daily
 controls, session management, and a permanent peak-equity drawdown lock.
+
+Release candidate: see [patch release notes and alert migration](RELEASE_NOTES.md).
 
 ## Repository map
 
@@ -12,9 +14,9 @@ controls, session management, and a permanent peak-equity drawdown lock.
 | --- | --- |
 | [`liquidity_structure_v1.pine`](liquidity_structure_v1.pine) | Standalone sweep + structure indicator with confirmed HTF context, closing-bar alerts, and a compact status panel. Hosted lifecycle assertions recorded in `tests/hosted`; live/Replay validation remains separate. |
 | [`INDICATOR_REVIEW.md`](INDICATOR_REVIEW.md) | Screenshot/code review, new indicator rules, installation, and validation scenarios. |
-| [`Liquidity_Structure_Monitor_User_Guide.docx`](Liquidity_Structure_Monitor_User_Guide.docx) | Word end-user guide for installing, configuring, and using LSM v1.1, including alerts and troubleshooting. |
+| [`Liquidity_Structure_Monitor_User_Guide.docx`](Liquidity_Structure_Monitor_User_Guide.docx) | Word end-user guide for installing, configuring, and using LSM v1.1.1, including alerts and troubleshooting. |
 | [`futures_v7_5.pine`](futures_v7_5.pine) | Authoritative executable strategy source. |
-| [`futures_v7_4.pine`](futures_v7_4.pine) | V7.4.1 compatibility strategy with the shared risk/session fixes and legacy text alerts. |
+| [`futures_v7_4.pine`](futures_v7_4.pine) | V7.4.2 compatibility strategy with the shared risk/session fixes and legacy text alerts. |
 | [`ALERT_SCHEMA.md`](ALERT_SCHEMA.md) | Versioned JSON alert contract, event semantics, and receiver obligations. |
 | [`USER_GUIDE.md`](USER_GUIDE.md) | Installation, complete input reference, formulas, operating workflow, and troubleshooting. |
 | [`STRATEGY_REVIEW.md`](STRATEGY_REVIEW.md) | Code-review findings, execution semantics, safety boundaries, and residual risks. |
@@ -31,7 +33,7 @@ compiler or an automated execution simulator.
 
 For the indicator, follow the Word guide and [indicator instructions](INDICATOR_REVIEW.md).
 For the strategy, use the steps below. Existing alert receivers must migrate to
-[schema 2.0.0](ALERT_SCHEMA.md) and recreate alerts for V7.5.2.
+[schema 2.0.0](ALERT_SCHEMA.md) and recreate alerts for V7.5.3.
 
 1. Read the [review and limitations](STRATEGY_REVIEW.md).
 2. Follow the [installation and chart-preparation guide](USER_GUIDE.md#3-installation).

@@ -269,8 +269,8 @@ plotshape(shortSignal, "Short confirmed", shape.labeldown, location.abovebar, co
 plot(referenceEntry, "Latest signal close", display = display.data_window)
 plot(referenceStop, "Latest reference stop", display = display.data_window)
 plot(referenceTarget, "Latest reference target", display = display.data_window)
-alertcondition(longSignal, "Long: sweep + structure", 'LSM v1.1 LONG {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
-alertcondition(shortSignal, "Short: sweep + structure", 'LSM v1.1 SHORT {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
+alertcondition(longSignal, "Long: sweep + structure", 'LSM v1.1.1 LONG {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
+alertcondition(shortSignal, "Short: sweep + structure", 'LSM v1.1.1 SHORT {{exchange}}:{{ticker}} TF={{interval}} close={{close}} stop={{plot("Latest reference stop")}} target={{plot("Latest reference target")}}')
 
 string corner = panelCorner == "Top left" ? position.top_left : panelCorner == "Bottom left" ? position.bottom_left : panelCorner == "Bottom right" ? position.bottom_right : position.top_right
 string textSize = panelSize == "Large" ? size.large : panelSize == "Normal" ? size.normal : size.small
@@ -280,7 +280,7 @@ panelRow(int row, string key, string value, color ink) =>
     table.cell(panel, 1, row, value, text_color = ink, text_size = textSize, text_halign = text.align_left)
 if barstate.islast
     if showPanel
-        panelRow(0, "LSM v1.1 | " + timeframe.period, state, longSignal ? color.aqua : shortSignal ? color.orange : color.white)
+        panelRow(0, "LSM v1.1.1 | " + timeframe.period, state, longSignal ? color.aqua : shortSignal ? color.orange : color.white)
         panelRow(1, "Context " + contextTf, useHtf ? (contextDirection == 1 ? "BULLISH" : contextDirection == -1 ? "BEARISH" : "MIXED / UNREADY") + " | completed bar" : "Filter off", color.silver)
         panelRow(2, "Session / " + zone, useSession ? signalSession + " | " + (inSession ? "INSIDE" : "OUTSIDE") : "All chart hours", color.silver)
         panelRow(3, "Armed / age", armedDirection == 0 ? "None" : (armedDirection == 1 ? "LONG | " : "SHORT | ") + str.tostring(bar_index - armedBar) + "/" + str.tostring(validityBars), color.yellow)
@@ -291,7 +291,7 @@ if barstate.islast
     else
         table.clear(panel, 0, 0, 1, 7)
 
-// Production source SHA256: fb7d6c9aa881f59cdea0c830f6d7f6f4afae74c225df3c3489f63f346201179b
+// Production source SHA256: 861e8bb7eae18b9bf254dc9fd146f802d2c89ceac99704e6f7d9d41d597db459
 
 // Assertions observe the full production state machine above on actual OHLC.
 var int auditArms = 0

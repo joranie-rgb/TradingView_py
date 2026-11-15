@@ -1,4 +1,4 @@
-# Code Review of Futures Strategy V7.5.2
+# Code Review of Futures Strategy V7.5.3
 
 `futures_v7_5.pine` is the reviewed successor to V7.3. It uses confirmed chart
 bars, same-close market-order execution, and no higher-timeframe or future-data
@@ -8,10 +8,10 @@ checklist, see `USER_GUIDE.md`.
 
 ## Current review fixes
 
-The current sources are V7.5.2 and compatibility V7.4.1. See
+The current sources are V7.5.3 and compatibility V7.4.2. See
 [the 14-finding resolution matrix](REVIEW_FIXES.md) for the latest changes and
 hosted validation requirements. Earlier finding histories below describe their
-original review context. V7.5.2 alerts require schema 2.0.0 migration.
+original review context. V7.5.3 alerts require schema 2.0.0 migration.
 
 ## Review scope and method
 

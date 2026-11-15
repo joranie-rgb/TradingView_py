@@ -1,7 +1,7 @@
 //@version=6
 strategy(
-     title = "AI Futures Strategy - Version 7.5.2 Review Fixes",
-     shorttitle = "Fut V7.5.2",
+     title = "AI Futures Strategy - Version 7.5.3 Review Fixes",
+     shorttitle = "Fut V7.5.3",
      overlay = true,
      initial_capital = 100000,
      currency = currency.USD,
@@ -259,7 +259,7 @@ var string configurationId = array.join(array.from(
 ), "|")
 
 eventIdentity(string instanceId, string configId, string tickerId, string chartTf, int submittedAt, string eventName) =>
-    "7.5.2:" + instanceId + ":" + configId + ":" + tickerId + ":" + chartTf + ":" + str.tostring(submittedAt) + ":" + eventName
+    "7.5.3:" + instanceId + ":" + configId + ":" + tickerId + ":" + chartTf + ":" + str.tostring(submittedAt) + ":" + eventName
 
 // Alert payload contract: see ALERT_SCHEMA.md. Timestamps are Unix milliseconds.
 // Keep this function side-effect free so structured messages do not change the
@@ -282,7 +282,7 @@ alertPayload(string eventName, string action, string direction, float quantity, 
     string eventIdentifier = eventIdentity(alertInstanceId, configurationId, syminfo.tickerid, timeframe.period, submissionTimestamp, eventName)
     string payload = "{"
     payload := payload + "\"schema_version\":\"2.0.0\","
-    payload := payload + "\"strategy_version\":\"7.5.2\","
+    payload := payload + "\"strategy_version\":\"7.5.3\","
     payload := payload + "\"event_id\":" + jsonString(eventIdentifier) + ","
     payload := payload + "\"instance_id\":" + jsonString(alertInstanceId) + ","
     payload := payload + "\"configuration_id\":" + jsonString(configurationId) + ","

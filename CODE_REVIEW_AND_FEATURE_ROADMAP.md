@@ -1,7 +1,7 @@
 # Code Review, Feature Assessment, and Recommended Roadmap
 
-Current maintenance release: **V7.5.2 / LSM v1.1**, with compatibility
-**V7.4.1**. The [review fix matrix](REVIEW_FIXES.md) records subsequent fixes;
+Current patch release candidate: **V7.5.3 / LSM v1.1.1**, with compatibility
+**V7.4.2**. The [review fix matrix](REVIEW_FIXES.md) records subsequent fixes;
 the roadmap's earlier review history is retained below.
 
 ## 1. Purpose and scope
@@ -154,7 +154,7 @@ acknowledgements and fills.
 **Value:** High for automation; medium for manual use.  
 **Behavioral risk:** Low if event timing is unchanged.  
 **Validation cost:** Medium.  
-**Status:** Completed and revised in V7.5.2. All alert paths emit schema `2.0.0` JSON and the
+**Status:** Completed and revised in V7.5.3. All alert paths emit schema `2.0.0` JSON and the
 field/event semantics and external receiver obligations are published in
 `ALERT_SCHEMA.md`. Confirmed-bar event conditions and frequency are unchanged.
 

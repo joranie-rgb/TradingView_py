@@ -108,7 +108,7 @@ class StrategyContractTests(unittest.TestCase):
         ):
             self.assertIn(f'\\"{field}\\"', SOURCE)
         self.assertIn('\\"schema_version\\":\\"2.0.0\\"', SOURCE)
-        self.assertIn('\\"strategy_version\\":\\"7.5.2\\"', SOURCE)
+        self.assertIn('\\"strategy_version\\":\\"7.5.3\\"', SOURCE)
         self.assertTrue((ROOT / "ALERT_SCHEMA.md").is_file())
 
     def test_alert_payload_avoids_multiline_concatenation(self) -> None:
