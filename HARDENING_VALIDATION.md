@@ -133,3 +133,15 @@ clipping, table layout, page breaks, and readable footers.
 No signal-performance optimization or improved win-rate claim has been made.
 Any later filter optimization requires a frozen baseline, chronological holdout,
 cost assumptions, sample counts, expectancy, drawdown, and uncertainty estimates.
+
+## Released layout and manual alerts
+
+On November 15, 2026, both old V7.4b chart instances were removed, while the
+released strategies, both LSM instances and both Morning Thesis monitors were
+retained. The layout was saved. All four replacement manual-review alerts were
+Active, and their saved versions, intervals, messages, triggers, expiration and
+notification channels were inspected individually. Webhooks were disabled.
+See the [deployment and alert verification record](tests/hosted/DEPLOYMENT_ALERTS_2026-11-15.md)
+for exact settings and screenshots. This later deployment created real manual
+notification alerts; the earlier compilation reports describe canceled drafts.
+Live delivery and external receiver testing remain **UNVERIFIED**.
