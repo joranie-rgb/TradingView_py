@@ -111,3 +111,31 @@ RE10066 error persisted. The V7.4.2 saved alert snapshot remained five minutes,
 independent of the chart view. No source, signal filter or chart interval was
 changed, and no broker order was placed. Chart context/monitor repair is not
 claimed by this alert reconciliation.
+
+## Follow-up at approximately 10:21 New York, November 16
+
+The current Alerts list showed all four replacements Active. Latest-trigger
+times remained 10:07:06 for V7.5.3 and 10:10:00 for V7.4.2; neither LSM alert
+had a trigger time displayed. Both charts showed Market open. No alert was
+opened, paused, restarted, edited or recreated during this follow-up.
+
+The populated visible log was extracted through the browser accessibility text
+and compared with the earlier [16-row capture](evidence/tradingview-reconciled-live-events.json).
+All 16 rows matched exactly and in the same order, with zero new rows. No LSM
+LONG/SHORT, newer strategy entry or newer fill event was observed. This is a
+bounded visible-log comparison, not proof of absence after the check.
+
+The [follow-up extract](evidence/tradingview-live-followup-1022.json) contains
+those rows and an empty newRows list. Its filename identifies the capture
+batch; the observed TradingView clock was 10:21:47 New York.
+No new browser toast or payload was observed, and no additional mobile/sound
+receipt evidence was collected. Earlier broad strategy receipt confirmation
+remains scoped as recorded above. No extra delivery pass or failure is claimed.
+
+![Regular-session follow-up log with unchanged events](evidence/tradingview-live-followup-1022.jpg)
+
+LSM LONG/SHORT end-to-end delivery remains PENDING qualifying signals. The
+previously recorded short-entry/fill evidence remains valid for its examples;
+long-side and exhaustive paths, per-event device receipt/latency, and external
+receiver/broker reconciliation remain UNVERIFIED. No chart interval or source
+input was changed, and the separate Morning Thesis error was not addressed.
