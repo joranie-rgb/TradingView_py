@@ -167,3 +167,10 @@ found zero Active alerts and only two older inactive alerts in the current
 account view, with no filters selected. No new LSM or entry/fill delivery was
 observed. Current replacement-alert availability is unresolved; November 15
 evidence remains historical and must not be presented as current Active status.
+
+The [November 16 reconciliation](tests/hosted/ALERT_RECONCILIATION_2026-11-16.md)
+recovered all four original Active alerts after browser reload without recreation.
+It records regular-session short entry/exit logs, native fill-message expansion,
+a live V7.4.2 toast and broad user confirmation of strategy push/sound receipt.
+LSM delivery, per-event device receipt and exhaustive order paths remain pending
+or unverified; the report includes a brief V7.5.3 pause/restart coverage gap.
