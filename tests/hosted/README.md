@@ -81,3 +81,7 @@ entry/fill evidence, and user-reported strategy push/sound receipt scope.
 The [LSM SHORT delivery report](LSM_SHORT_DELIVERY_2026-11-16.md) preserves the
 11:13 expanded signal message, user-confirmed mobile push/sound, screenshots and
 channel-specific limits. LSM LONG remains pending.
+
+The [V7.4.2 LONG_ENTRY report](LONG_ENTRY_DELIVERY_2026-11-16.md) records the
+11:35 long intent/fill and message expansion, notification card, receipt
+confirmation and remaining LSM LONG/lifecycle/channel limits.

@@ -72,3 +72,9 @@ monitor's RE10066 error remained present and was not diagnosed in this check.
 
 This bounded check adds LSM SHORT evidence only; it is not a blanket pass for
 both LSM directions or every notification channel.
+
+## Subsequent strategy evidence
+
+The [11:35 V7.4.2 long-entry report](LONG_ENTRY_DELIVERY_2026-11-16.md) records
+a newer classified long intent/fill example. LSM LONG remains pending; the
+earlier unclassified 10:52:31 trigger is not resolved by this later event.

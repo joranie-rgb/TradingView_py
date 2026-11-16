@@ -180,3 +180,8 @@ resolved log-message values and event-specific user confirmation of mobile push
 and sound. Browser-toast delivery for this event remains unverified; LSM LONG
 remains pending. A newer V7.4.2 trigger timestamp was visible, but its event type
 and payload were unavailable in the current log view.
+
+The [11:35 V7.4.2 LONG_ENTRY report](tests/hosted/LONG_ENTRY_DELIVERY_2026-11-16.md)
+adds intent/fill log messages, expanded fill placeholders, a directly observed
+notification card and event-specific user confirmation of push/sound. LSM LONG,
+V7.5.3 long examples, long exits and exhaustive paths remain pending/unverified.
