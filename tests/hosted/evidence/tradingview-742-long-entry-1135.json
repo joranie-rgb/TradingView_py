@@ -1,0 +1,24 @@
+{
+  "observed_at_approx": "2026-11-16T11:41:00-05:00",
+  "event_time": "2026-11-16T11:35:00-05:00",
+  "alert": "MANUAL | MNQ 5m | Fut V7.4.2 | fills + intents",
+  "messages": [
+    "LONG_ENTRY",
+    "Fut V7.4.2 MNQ1! TF=5 event=LONG_ENTRY action=buy qty=1 price=27601.50 position=1"
+  ],
+  "delivery": {
+    "log": "observed",
+    "browser_notification_card": "directly observed during 11:41 inspection; event timestamp 11:35",
+    "mobile_push": "user confirmed received for queried LONG_ENTRY",
+    "sound": "user confirmed received for queried LONG_ENTRY",
+    "per_message_receipt": "not separately confirmed",
+    "device": "unspecified",
+    "latency": "unverified"
+  },
+  "other_alerts": {
+    "lsm_long": "Active, no trigger time",
+    "lsm_short": "Active, latest 11:13",
+    "strategy753": "Active, latest 10:07:06"
+  },
+  "scope": "emulator entry only; not broker fill reconciliation or long exit evidence"
+}
