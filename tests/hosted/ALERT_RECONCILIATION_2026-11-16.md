@@ -1,6 +1,6 @@
 # Replacement alert reconciliation and regular-session entry/fill evidence
 
-Observed November 16, 2026, approximately 10:10–10:14 America/New_York. This
+Observed November 16, 2026, approximately 10:10â€“10:14 America/New_York. This
 follow-up reconciles the [09:39 missing-alert view](LIVE_DELIVERY_2026-11-16.md)
 and supplements the [earlier delivery ledger](LIVE_DELIVERY_2026-11-15.md).
 
@@ -88,8 +88,8 @@ alert() calls; the UI extract does not separately label each member's origin.
 ## Receipt evidence and remaining scope
 
 The user answered **yes** when asked whether mobile pushes and sound were
-received for today's V7.5.3 entries/exits around 09:31–10:07 and V7.4.2 entries/
-exit around 09:35–10:10. Record this as a broad user confirmation for the queried
+received for today's V7.5.3 entries/exits around 09:31â€“10:07 and V7.4.2 entries/
+exit around 09:35â€“10:10. Record this as a broad user confirmation for the queried
 strategy notifications. No individual event list, device, exact receipt time or
 latency was supplied; it does not establish per-event receipt for every row.
 Earlier SESSION_EXIT confirmations remain separate historical evidence.
@@ -111,3 +111,31 @@ RE10066 error persisted. The V7.4.2 saved alert snapshot remained five minutes,
 independent of the chart view. No source, signal filter or chart interval was
 changed, and no broker order was placed. Chart context/monitor repair is not
 claimed by this alert reconciliation.
+
+## Follow-up at approximately 10:21 New York, November 16
+
+The current Alerts list showed all four replacements Active. Latest-trigger
+times remained 10:07:06 for V7.5.3 and 10:10:00 for V7.4.2; neither LSM alert
+had a trigger time displayed. Both charts showed Market open. No alert was
+opened, paused, restarted, edited or recreated during this follow-up.
+
+The populated visible log was extracted through the browser accessibility text
+and compared with the earlier [16-row capture](evidence/tradingview-reconciled-live-events.json).
+All 16 rows matched exactly and in the same order, with zero new rows. No LSM
+LONG/SHORT, newer strategy entry or newer fill event was observed. This is a
+bounded visible-log comparison, not proof of absence after the check.
+
+The [follow-up extract](evidence/tradingview-live-followup-1022.json) contains
+those rows and an empty newRows list. Its filename identifies the capture
+batch; the observed TradingView clock was 10:21:47 New York.
+No new browser toast or payload was observed, and no additional mobile/sound
+receipt evidence was collected. Earlier broad strategy receipt confirmation
+remains scoped as recorded above. No extra delivery pass or failure is claimed.
+
+![Regular-session follow-up log with unchanged events](evidence/tradingview-live-followup-1022.jpg)
+
+LSM LONG/SHORT end-to-end delivery remains PENDING qualifying signals. The
+previously recorded short-entry/fill evidence remains valid for its examples;
+long-side and exhaustive paths, per-event device receipt/latency, and external
+receiver/broker reconciliation remain UNVERIFIED. No chart interval or source
+input was changed, and the separate Morning Thesis error was not addressed.
