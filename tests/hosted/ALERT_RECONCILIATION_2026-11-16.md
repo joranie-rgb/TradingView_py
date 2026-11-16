@@ -1,6 +1,6 @@
 # Replacement alert reconciliation and regular-session entry/fill evidence
 
-Observed November 16, 2026, approximately 10:10â€“10:14 America/New_York. This
+Observed November 16, 2026, approximately 10:10–10:14 America/New_York. This
 follow-up reconciles the [09:39 missing-alert view](LIVE_DELIVERY_2026-11-16.md)
 and supplements the [earlier delivery ledger](LIVE_DELIVERY_2026-11-15.md).
 
@@ -88,8 +88,8 @@ alert() calls; the UI extract does not separately label each member's origin.
 ## Receipt evidence and remaining scope
 
 The user answered **yes** when asked whether mobile pushes and sound were
-received for today's V7.5.3 entries/exits around 09:31â€“10:07 and V7.4.2 entries/
-exit around 09:35â€“10:10. Record this as a broad user confirmation for the queried
+received for today's V7.5.3 entries/exits around 09:31–10:07 and V7.4.2 entries/
+exit around 09:35–10:10. Record this as a broad user confirmation for the queried
 strategy notifications. No individual event list, device, exact receipt time or
 latency was supplied; it does not establish per-event receipt for every row.
 Earlier SESSION_EXIT confirmations remain separate historical evidence.
