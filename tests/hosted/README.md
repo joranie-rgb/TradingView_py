@@ -77,3 +77,7 @@ status/filter and log screenshots.
 See the [November 16 alert reconciliation](ALERT_RECONCILIATION_2026-11-16.md)
 for the recovered original alerts, individually verified settings, regular-session
 entry/fill evidence, and user-reported strategy push/sound receipt scope.
+
+The [LSM SHORT delivery report](LSM_SHORT_DELIVERY_2026-11-16.md) preserves the
+11:13 expanded signal message, user-confirmed mobile push/sound, screenshots and
+channel-specific limits. LSM LONG remains pending.
