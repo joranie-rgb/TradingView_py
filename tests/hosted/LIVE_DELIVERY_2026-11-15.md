@@ -172,3 +172,11 @@ entry/fill delivery and order-fill placeholder expansion remain UNVERIFIED.
 This check does not establish that eligible regular-session signals have been
 observed. No alerts, signal filters, source inputs or chart intervals were
 changed, and the log was not cleared.
+
+## Subsequent regular-session observation
+
+The [November 16 follow-up](LIVE_DELIVERY_2026-11-16.md) was inside the configured
+signal windows, but the current account view listed only two older inactive
+alerts and zero Active alerts. The four replacements and their November 15 log
+entries were not visible. Earlier evidence is retained; current availability
+must be reconciled before further end-to-end delivery validation.
