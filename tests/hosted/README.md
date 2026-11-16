@@ -73,3 +73,7 @@ Pending alerts are not counted as delivery passes or failures.
 The [November 16 regular-session record](LIVE_DELIVERY_2026-11-16.md) documents
 the current alert-availability discrepancy and no new delivery evidence, with
 status/filter and log screenshots.
+
+See the [November 16 alert reconciliation](ALERT_RECONCILIATION_2026-11-16.md)
+for the recovered original alerts, individually verified settings, regular-session
+entry/fill evidence, and user-reported strategy push/sound receipt scope.

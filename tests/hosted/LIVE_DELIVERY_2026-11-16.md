@@ -69,3 +69,10 @@ the [deployment record](DEPLOYMENT_ALERTS_2026-11-15.md). Record any new creatio
 time and observe actual qualifying signals; do not infer a pass from Active
 status. No source, alert settings, chart interval, broker connection or order was
 changed during this check.
+
+## Reconciliation follow-up
+
+The [10:10 reconciliation](ALERT_RECONCILIATION_2026-11-16.md) recovered the four
+original Active replacements and current log after a browser reload. The earlier
+missing view was not proof of deletion. No recreation was needed. New strategy
+entry/fill evidence is recorded there, with LSM delivery still pending.
