@@ -174,3 +174,9 @@ It records regular-session short entry/exit logs, native fill-message expansion,
 a live V7.4.2 toast and broad user confirmation of strategy push/sound receipt.
 LSM delivery, per-event device receipt and exhaustive order paths remain pending
 or unverified; the report includes a brief V7.5.3 pause/restart coverage gap.
+
+The [11:13 LSM SHORT event](tests/hosted/LSM_SHORT_DELIVERY_2026-11-16.md) has
+resolved log-message values and event-specific user confirmation of mobile push
+and sound. Browser-toast delivery for this event remains unverified; LSM LONG
+remains pending. A newer V7.4.2 trigger timestamp was visible, but its event type
+and payload were unavailable in the current log view.

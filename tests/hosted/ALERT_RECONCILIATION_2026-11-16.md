@@ -139,3 +139,10 @@ previously recorded short-entry/fill evidence remains valid for its examples;
 long-side and exhaustive paths, per-event device receipt/latency, and external
 receiver/broker reconciliation remain UNVERIFIED. No chart interval or source
 input was changed, and the separate Morning Thesis error was not addressed.
+
+## Later LSM SHORT evidence
+
+The [11:13 LSM SHORT report](LSM_SHORT_DELIVERY_2026-11-16.md) supersedes the
+previous pending status for that one observed signal and its user-confirmed
+push/sound channels. LONG remains pending; the report records the unobserved
+browser-toast channel and limited strategy-history visibility separately.

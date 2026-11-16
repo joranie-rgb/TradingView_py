@@ -1,0 +1,22 @@
+{
+  "observed_at_approx": "2026-11-16T11:14:00-05:00",
+  "alert_name": "MANUAL | MNQ 1m | LSM v1.1.1 SHORT",
+  "logged_at": "2026-11-16T11:13:00-05:00",
+  "message": "LSM v1.1.1 SHORT CME_MINI:MNQ1! TF=1 close=27483.00 stop=27585 target=27279",
+  "delivery": {
+    "log": "observed",
+    "browser_toast": "not directly observed",
+    "mobile_push": "user confirmed received for this event",
+    "sound": "user confirmed received for this event",
+    "device": "unspecified",
+    "receipt_time": "unspecified"
+  },
+  "strategy_latest_triggers": {
+    "7.5.3": "10:07:06",
+    "7.4.2": "10:52:31"
+  },
+  "limitations": [
+    "Only LSM short row visible in current populated log; earlier history not present in this view",
+    "V7.4.2 new latest-trigger timestamp does not establish event type or message"
+  ]
+}
