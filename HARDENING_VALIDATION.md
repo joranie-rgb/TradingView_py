@@ -161,3 +161,9 @@ A subsequent November 15 check at 18:25 New York time found all four alerts
 Active, no log filters selected, and no newer LSM or strategy entry/fill events.
 The [live-delivery ledger](tests/hosted/LIVE_DELIVERY_2026-11-15.md) preserves
 follow-up log/status screenshots; pending delivery scopes are unchanged.
+
+The [November 16 regular-session check](tests/hosted/LIVE_DELIVERY_2026-11-16.md)
+found zero Active alerts and only two older inactive alerts in the current
+account view, with no filters selected. No new LSM or entry/fill delivery was
+observed. Current replacement-alert availability is unresolved; November 15
+evidence remains historical and must not be presented as current Active status.

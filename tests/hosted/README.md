@@ -69,3 +69,7 @@ The [live-delivery ledger](LIVE_DELIVERY_2026-11-15.md) separates current
 replacement-alert events from historical log entries, and records trigger,
 browser toast, user-confirmed mobile push and sound evidence independently.
 Pending alerts are not counted as delivery passes or failures.
+
+The [November 16 regular-session record](LIVE_DELIVERY_2026-11-16.md) documents
+the current alert-availability discrepancy and no new delivery evidence, with
+status/filter and log screenshots.
