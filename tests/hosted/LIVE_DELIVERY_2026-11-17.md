@@ -87,3 +87,46 @@ receipt attribution, device-specific behavior and latency remain unverified.
 
 No blanket delivery pass is claimed for every log record, strategy direction
 or channel. No broker orders were submitted by this inspection.
+
+## 13:27 follow-up: V7.4.2 short entry and stop exit
+
+The next bounded inspection occurred November 17 at approximately 13:27
+America/New_York (the TradingView clock showed 13:26:53–13:26:56 UTC-5).
+Compared with the 11:23 observation above, the populated log contained three
+new V7.4.2 / MNQ 5m rows:
+
+| Logged time | Message |
+| --- | --- |
+| 11:35:00 | `SHORT_ENTRY` |
+| 11:35:00 | `Fut V7.4.2 MNQ1! TF=5 event=SHORT_ENTRY action=sell qty=1 price=26907.00 position=-1` |
+| 12:17:53 | `Fut V7.4.2 MNQ1! TF=5 event=SHORT_STOP_EXIT action=buy qty=1 price=27055.25 position=0` |
+
+The first two rows are the intent and expanded emulator-fill message for one
+entry, not two independent setups. The stop-exit row resolves event, action,
+quantity, price and flat position. These are retrospective native log
+observations, not direct observations of notification arrival or broker fills.
+The [structured follow-up record](evidence/tradingview-742-short-followup-2026-11-17.json)
+transcribes these observed values; no screenshot was saved for this inspection.
+The earlier screenshots and 11:23 JSON remain unchanged and do not depict these
+later events.
+
+All four original replacement alerts showed Active. Latest-trigger values were
+V7.4.2 November 17 12:17:53, V7.5.3 November 17 10:33:15 (unchanged),
+and LSM SHORT November 16 11:13 (unchanged). LSM LONG had no latest-trigger
+time and no LONG event appeared in the populated log. Its delivery remains
+**PENDING**, not failed. No newer V7.5.3 or LSM SHORT event was observed.
+
+Mobile push, sound and browser-toast delivery for the new 11:35 entry and
+12:17 stop remain **UNVERIFIED**. The earlier grouped user confirmation covers
+the previously queried events only and must not be extended to these later
+rows. Individual receipt attribution, devices, exact receipt times and latency
+remain unverified. V7.5.3 long-side examples, exhaustive order paths, the
+unclassified November 16 V7.4.2 10:52:31 trigger, and external receiver
+deduplication/expiry enforcement/broker reconciliation remain unverified.
+No external receiver is configured. This was not continuous monitoring or
+complete-history verification.
+
+Both chart views remained one minute while the saved V7.4.2 alert showed five
+minutes. The separate Morning Thesis Monitor RE10066 error persisted. No alert
+settings, source inputs or chart intervals were changed, no log was cleared,
+and no broker orders were submitted. No new filter inspection was performed.
