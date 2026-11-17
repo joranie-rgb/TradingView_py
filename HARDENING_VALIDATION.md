@@ -185,3 +185,9 @@ The [11:35 V7.4.2 LONG_ENTRY report](tests/hosted/LONG_ENTRY_DELIVERY_2026-11-16
 adds intent/fill log messages, expanded fill placeholders, a directly observed
 notification card and event-specific user confirmation of push/sound. LSM LONG,
 V7.5.3 long examples, long exits and exhaustive paths remain pending/unverified.
+
+The [November 17 live check](tests/hosted/LIVE_DELIVERY_2026-11-17.md) records
+new dated short entry/stop/target messages, a retrospective target-fill card,
+and a newly inspected November 16 V7.4.2 long-stop fill. The user broadly
+confirmed push/sound in response to the grouped event question; individual
+receipts, devices and latency remain unverified. LSM LONG remains pending.
