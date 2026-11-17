@@ -1,0 +1,19 @@
+{
+  "observed_at_approx": "2026-11-17T13:27:00-05:00",
+  "timezone": "America/New_York",
+  "source": "Retrospective TradingView visible log and saved-alert inventory; transcribed from the inspection. No screenshot saved.",
+  "records": [
+    {"logged_at": "2026-11-17T11:35:00-05:00", "text": "SHORT_ENTRY", "kind": "intent"},
+    {"logged_at": "2026-11-17T11:35:00-05:00", "text": "Fut V7.4.2 MNQ1! TF=5 event=SHORT_ENTRY action=sell qty=1 price=26907.00 position=-1", "kind": "expanded_emulator_fill"},
+    {"logged_at": "2026-11-17T12:17:53-05:00", "text": "Fut V7.4.2 MNQ1! TF=5 event=SHORT_STOP_EXIT action=buy qty=1 price=27055.25 position=0", "kind": "expanded_emulator_fill"}
+  ],
+  "inventory": {
+    "all_four_replacement_alerts_active": true,
+    "v742_latest_trigger": "2026-11-17T12:17:53-05:00",
+    "v753_latest_trigger": "2026-11-17T10:33:15-05:00",
+    "lsm_short_latest_trigger": "2026-11-16T11:13:00-05:00",
+    "lsm_long_latest_trigger": null
+  },
+  "delivery_for_new_events": {"mobile_push": "unverified", "sound": "unverified", "browser_toast": "unverified", "receipt_time_and_latency": "unverified"},
+  "limits": ["Earlier grouped receipt confirmation does not cover these later events", "Two entry rows represent one entry", "Bounded observation, not continuous monitoring or complete history", "No external receiver configured; broker reconciliation unverified", "No new log-filter inspection"]
+}

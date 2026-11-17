@@ -191,3 +191,12 @@ new dated short entry/stop/target messages, a retrospective target-fill card,
 and a newly inspected November 16 V7.4.2 long-stop fill. The user broadly
 confirmed push/sound in response to the grouped event question; individual
 receipts, devices and latency remain unverified. LSM LONG remains pending.
+
+The same report's November 17 approximately 13:27 follow-up adds V7.4.2
+11:35 short-entry intent/expanded fill and 12:17:53 expanded stop-exit log
+evidence. All four alerts were Active; LSM LONG still had no trigger and
+V7.5.3/LSM SHORT latest-trigger values were unchanged. Push, sound and browser
+toast for these new events remain unverified: the earlier grouped confirmation
+does not cover them. Per-event receipt/latency, V7.5.3 long-side examples,
+exhaustive paths and external receiver/broker reconciliation remain unverified.
+Earlier pending statements above retain their historical observation scope.

@@ -89,3 +89,8 @@ confirmation and remaining LSM LONG/lifecycle/channel limits.
 The [November 17 delivery follow-up](LIVE_DELIVERY_2026-11-17.md) separates
 today's entry/exit logs from the prior-day long-stop fill, preserving dated JSON
 records and screenshots with channel-specific limitations. LSM LONG is pending.
+
+Its approximately 13:27 follow-up records the later V7.4.2 11:35 short entry
+and 12:17:53 stop exit, with a separate structured transcription. Their log
+messages are observed; push/sound/toast receipt remains unverified and the
+earlier grouped confirmation does not apply to these later events.
