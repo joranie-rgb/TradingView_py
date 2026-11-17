@@ -67,10 +67,13 @@ and latency are unknown. No toast was directly observed for every other row.
 
 ![Observed short-target fill notification card](evidence/tradingview-followup-2026-11-17-toast.jpg)
 
-Mobile push and sound confirmation was requested for today's strategy events and
-the newly recorded November 16 long stop. No new receipt confirmation is recorded
-here yet; earlier confirmations must not be extended automatically to these
-new events. Device, per-event receipt time and latency remain unverified.
+The user subsequently answered **yes** to the question asking about mobile push
+and sound for November 17 V7.5.3 short entries/exits around 09:36–10:33,
+V7.4.2 short entries/exits around 09:35–10:38, and the November 16 V7.4.2
+LONG_STOP_EXIT at 11:54. This is a broad confirmation in response to the grouped
+question, not an individually itemized receipt for every event or log row. The
+user did not distinguish groups, devices or exact receipt times. Per-event
+receipt attribution, device-specific behavior and latency remain unverified.
 
 | Scope | Status after this check |
 | --- | --- |
@@ -79,7 +82,7 @@ new events. Device, per-event receipt time and latency remain unverified.
 | New strategy entry/stop/target messages | Observed in dated log for the examples above |
 | V7.4.2 long-stop fill | Newly documented Nov 16 example, not a new Nov 17 long trade |
 | V7.4.2 target-fill browser card | Directly observed retrospectively; latency unverified |
-| New mobile push/sound receipts | UNVERIFIED pending user confirmation |
+| Mobile push/sound for queried event groups | Broad user confirmation; individual rows/groups not itemized |
 | V7.5.3 long-side, exhaustive order paths, device latency and external receiver/broker reconciliation | UNVERIFIED |
 
 No blanket delivery pass is claimed for every log record, strategy direction

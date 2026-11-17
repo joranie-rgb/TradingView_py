@@ -188,5 +188,6 @@ V7.5.3 long examples, long exits and exhaustive paths remain pending/unverified.
 
 The [November 17 live check](tests/hosted/LIVE_DELIVERY_2026-11-17.md) records
 new dated short entry/stop/target messages, a retrospective target-fill card,
-and a newly inspected November 16 V7.4.2 long-stop fill. LSM LONG and new
-mobile/sound receipts remain pending/unverified; prior evidence is not expanded.
+and a newly inspected November 16 V7.4.2 long-stop fill. The user broadly
+confirmed push/sound in response to the grouped event question; individual
+receipts, devices and latency remain unverified. LSM LONG remains pending.
