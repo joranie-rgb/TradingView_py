@@ -85,3 +85,7 @@ channel-specific limits. LSM LONG remains pending.
 The [V7.4.2 LONG_ENTRY report](LONG_ENTRY_DELIVERY_2026-11-16.md) records the
 11:35 long intent/fill and message expansion, notification card, receipt
 confirmation and remaining LSM LONG/lifecycle/channel limits.
+
+The [November 17 delivery follow-up](LIVE_DELIVERY_2026-11-17.md) separates
+today's entry/exit logs from the prior-day long-stop fill, preserving dated JSON
+records and screenshots with channel-specific limitations. LSM LONG is pending.

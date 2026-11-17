@@ -61,3 +61,9 @@ separate Morning Thesis monitor error was left unchanged.
 Earlier short-strategy and LSM SHORT evidence remains preserved with its own
 scope. This adds one V7.4.2 long-entry example, not a blanket pass for every
 strategy direction, lifecycle event or channel.
+
+## Later inspected long-stop evidence
+
+The [November 17 follow-up](LIVE_DELIVERY_2026-11-17.md) newly records the
+November 16 V7.4.2 LONG_STOP_EXIT at 11:54:22. This extends log coverage for that
+example only; its new push/sound receipt is not established by the entry receipt.
