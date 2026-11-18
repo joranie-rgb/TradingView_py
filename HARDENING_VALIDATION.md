@@ -209,3 +209,12 @@ alerts remained Active; LSM LONG still had no trigger. Push/sound for both
 unverified. Earlier receipt confirmations do not cover these later events.
 The 11:35 entry/12:17 stop receipt limits and other outstanding scopes remain
 unchanged. The observation record is a transcription; no screenshot was saved.
+
+The [November 18 report](tests/hosted/LIVE_DELIVERY_2026-11-18.md) adds specific
+V7.5.3 long-entry/long-stop and short-entry/short-target log examples and a
+retrospective 09:59 long-entry browser card. These long-side log examples are
+now observed; earlier pending wording is historical. Push/sound, other toast
+receipts, original arrival/latency, the 09:59 entry's complete lifecycle,
+long-target/exhaustive paths and external reconciliation remain unverified.
+All four alerts were Active; LSM LONG remains pending. V7.4.2 and LSM SHORT
+latest-trigger values were unchanged. Prior receipt limits remain unresolved.
