@@ -100,3 +100,8 @@ SESSION_EXIT messages and retrospective V7.5.3 browser-card visibility. Its
 separate structured transcription preserves the remaining channel limits:
 push/sound for both events and V7.4.2 toast receipt remain unverified, with
 LSM LONG still pending.
+
+The [November 18 observation](LIVE_DELIVERY_2026-11-18.md) records V7.5.3
+long-entry/long-stop and short-entry/short-target log examples, a retrospective
+09:59 browser card and a selected-field transcription. Push/sound, latency and
+exhaustive paths remain unverified; LSM LONG is pending.

@@ -1,0 +1,104 @@
+{
+  "observed_at_approx": "2026-11-18T10:08:00-05:00",
+  "source": "Selected-field transcription from visible TradingView log and inventory; no screenshot saved; not complete raw payloads",
+  "records": [
+    {
+      "logged_at": "2026-11-18T09:31:00-05:00",
+      "event": "LONG_ENTRY",
+      "matching_row_count": 2,
+      "schema_version": "2.0.0",
+      "strategy_version": "7.5.3",
+      "instance_id": "research-1",
+      "action": "ENTER",
+      "direction": "LONG",
+      "quantity": 1,
+      "planned_bracket_ticks": {
+        "stop": 128,
+        "target": 256
+      },
+      "signal_timestamp": 1795012260000,
+      "expiration_timestamp": 1795012320000
+    },
+    {
+      "logged_at": "2026-11-18T09:31:23-05:00",
+      "event": "LONG_STOP_EXIT",
+      "matching_row_count": 1,
+      "schema_version": "2.0.0",
+      "strategy_version": "7.5.3",
+      "instance_id": "research-1",
+      "action": "EXIT",
+      "direction": "LONG",
+      "quantity": 1,
+      "planned_bracket_ticks": {
+        "stop": 128,
+        "target": 256
+      },
+      "signal_timestamp": 1795012260000,
+      "expiration_timestamp": null
+    },
+    {
+      "logged_at": "2026-11-18T09:38:00-05:00",
+      "event": "SHORT_ENTRY",
+      "matching_row_count": 2,
+      "schema_version": "2.0.0",
+      "strategy_version": "7.5.3",
+      "instance_id": "research-1",
+      "action": "ENTER",
+      "direction": "SHORT",
+      "quantity": 1,
+      "planned_bracket_ticks": {
+        "stop": 224,
+        "target": 448
+      },
+      "signal_timestamp": 1795012560000,
+      "expiration_timestamp": 1795012740000
+    },
+    {
+      "logged_at": "2026-11-18T09:41:12-05:00",
+      "event": "SHORT_TARGET_EXIT",
+      "matching_row_count": 1,
+      "schema_version": "2.0.0",
+      "strategy_version": "7.5.3",
+      "instance_id": "research-1",
+      "action": "EXIT",
+      "direction": "SHORT",
+      "quantity": 1,
+      "planned_bracket_ticks": {
+        "stop": 224,
+        "target": 448
+      },
+      "signal_timestamp": 1795012860000,
+      "expiration_timestamp": null
+    },
+    {
+      "logged_at": "2026-11-18T09:59:00-05:00",
+      "event": "LONG_ENTRY",
+      "matching_row_count": 2,
+      "schema_version": "2.0.0",
+      "strategy_version": "7.5.3",
+      "instance_id": "research-1",
+      "action": "ENTER",
+      "direction": "LONG",
+      "quantity": 1,
+      "planned_bracket_ticks": {
+        "stop": 376,
+        "target": 752
+      },
+      "signal_timestamp": 1795013940000,
+      "expiration_timestamp": 1795014000000
+    }
+  ],
+  "inventory": {
+    "all_four_active": true,
+    "v753_latest": "2026-11-18T09:59:00-05:00",
+    "v742_latest": "2026-11-17T15:50:00-05:00",
+    "lsm_short_latest": "2026-11-16T11:13:00-05:00",
+    "lsm_long_latest": null
+  },
+  "channels": {
+    "0959_long_entry_browser_card": "visible retrospectively; original arrival and latency unknown",
+    "other_toasts": "unverified",
+    "mobile_push": "unverified",
+    "sound": "unverified"
+  }
+}
