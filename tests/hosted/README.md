@@ -94,3 +94,9 @@ Its approximately 13:27 follow-up records the later V7.4.2 11:35 short entry
 and 12:17:53 stop exit, with a separate structured transcription. Their log
 messages are observed; push/sound/toast receipt remains unverified and the
 earlier grouped confirmation does not apply to these later events.
+
+The same report's approximately 19:43 inspection adds both strategies' 15:50
+SESSION_EXIT messages and retrospective V7.5.3 browser-card visibility. Its
+separate structured transcription preserves the remaining channel limits:
+push/sound for both events and V7.4.2 toast receipt remain unverified, with
+LSM LONG still pending.

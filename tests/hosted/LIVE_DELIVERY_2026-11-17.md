@@ -130,3 +130,51 @@ Both chart views remained one minute while the saved V7.4.2 alert showed five
 minutes. The separate Morning Thesis Monitor RE10066 error persisted. No alert
 settings, source inputs or chart intervals were changed, no log was cleared,
 and no broker orders were submitted. No new filter inspection was performed.
+
+## 19:43 follow-up: both strategies' 15:50 SESSION_EXIT
+
+Inspected November 17 at approximately 19:43 America/New_York; the TradingView
+clock showed 19:43:08–19:43:14 UTC-5. Compared with the 13:27 inspection, the
+populated log showed two newer administrative notifications, both dated
+November 17 at 15:50:00:
+
+| Saved alert | Observed message |
+| --- | --- |
+| V7.5.3 / MNQ 1m | Structured `SESSION_EXIT`, schema `2.0.0`, strategy `7.5.3`, instance `research-1`, action `EXIT`, direction `FLAT`, quantity `0`, reason `SESSION_CUTOFF` |
+| V7.4.2 / MNQ 5m | Literal legacy `SESSION_EXIT` |
+
+The V7.5.3 message showed signal_timestamp and expiration_timestamp both
+1794948600000, risk_day_id 1794891600000, and null stop/target bracket ticks.
+These are administrative alert messages, not new order-fill or broker-fill
+evidence. No additional entry, stop or target message newer than the previously
+documented 12:17:53 V7.4.2 stop appeared in the inspected log.
+
+A V7.5.3 SESSION_EXIT browser notification card with event time 15:50:00 was
+directly visible during the 19:43 inspection. This is retrospective card
+visibility, not a direct observation of original arrival or latency. No
+V7.4.2 SESSION_EXIT toast was directly observed. The
+[structured observation record](evidence/tradingview-session-exit-followup-2026-11-17.json)
+preserves a transcription of the observed fields and channel limits; no
+screenshot was saved for this inspection. Earlier images do not depict these
+new events. No new log-filter inspection was performed.
+
+All four original replacement alerts remained Active. Both strategies' latest
+trigger fields advanced to November 17 15:50:00. LSM SHORT remained at November
+16 11:13:00. LSM LONG had no latest-trigger time and no LONG event appeared in
+the populated log: delivery remains **PENDING**, not failed.
+
+Mobile push and sound for both new 15:50 events remain **UNVERIFIED**, as does
+V7.4.2 browser-toast receipt. Earlier user confirmations do not cover these
+events. Push/sound/toast receipt for the 11:35 V7.4.2 entry and 12:17 stop also
+remains unverified. Per-event attribution, devices, exact arrival times and
+latency remain unverified. V7.5.3 long-side examples, exhaustive order paths,
+the unclassified November 16 V7.4.2 10:52:31 trigger, and external receiver
+deduplication/expiry enforcement/broker reconciliation remain unverified; no
+external receiver is configured.
+
+The first chart showed one minute and the second five minutes, unlike the two
+one-minute views at 13:27. This inspection did not change chart intervals,
+alert settings or source inputs, clear the log, or submit broker orders. It
+was a bounded retrospective inspection, not continuous monitoring or complete
+history verification. The evening inspection was outside the configured entry
+and weekday LSM signal windows; Market open does not establish signal eligibility.
