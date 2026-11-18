@@ -200,3 +200,12 @@ toast for these new events remain unverified: the earlier grouped confirmation
 does not cover them. Per-event receipt/latency, V7.5.3 long-side examples,
 exhaustive paths and external receiver/broker reconciliation remain unverified.
 Earlier pending statements above retain their historical observation scope.
+
+The November 17 report's approximately 19:43 follow-up adds both strategies'
+15:50 SESSION_EXIT log messages and a retrospectively visible V7.5.3 browser
+card. These are administrative notifications, not new fill evidence. All four
+alerts remained Active; LSM LONG still had no trigger. Push/sound for both
+15:50 events, V7.4.2 toast receipt, and original arrival times/latency remain
+unverified. Earlier receipt confirmations do not cover these later events.
+The 11:35 entry/12:17 stop receipt limits and other outstanding scopes remain
+unchanged. The observation record is a transcription; no screenshot was saved.

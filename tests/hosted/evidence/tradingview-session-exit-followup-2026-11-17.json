@@ -1,0 +1,36 @@
+{
+  "observed_at_approx": "2026-11-17T19:43:00-05:00",
+  "timezone": "America/New_York",
+  "source": "Transcription of visible TradingView log, saved-alert inventory and V7.5.3 browser notification card; no screenshot saved",
+  "records": [
+    {
+      "logged_at": "2026-11-17T15:50:00-05:00",
+      "alert": "MANUAL | MNQ 1m | Fut V7.5.3 | fills + intents",
+      "observed_payload_fields": {
+        "schema_version": "2.0.0", "strategy_version": "7.5.3",
+        "instance_id": "research-1", "event": "SESSION_EXIT",
+        "symbol": "MNQ1!", "exchange": "CME_MINI", "timeframe": "1",
+        "signal_timestamp": 1794948600000, "expiration_timestamp": 1794948600000,
+        "action": "EXIT", "direction": "FLAT", "quantity": 0,
+        "planned_bracket_ticks": {"stop": null, "target": null},
+        "risk_day_id": 1794891600000, "administrative_reason": "SESSION_CUTOFF"
+      },
+      "browser_card": "directly visible retrospectively at inspection; original arrival and latency unknown",
+      "mobile_push": "unverified", "sound": "unverified"
+    },
+    {
+      "logged_at": "2026-11-17T15:50:00-05:00",
+      "alert": "MANUAL | MNQ 5m | Fut V7.4.2 | fills + intents",
+      "text": "SESSION_EXIT", "browser_toast": "unverified",
+      "mobile_push": "unverified", "sound": "unverified"
+    }
+  ],
+  "inventory": {
+    "all_four_replacement_alerts_active": true,
+    "v753_latest_trigger": "2026-11-17T15:50:00-05:00",
+    "v742_latest_trigger": "2026-11-17T15:50:00-05:00",
+    "lsm_short_latest_trigger": "2026-11-16T11:13:00-05:00",
+    "lsm_long_latest_trigger": null
+  },
+  "limits": ["Selected payload fields, not a complete raw payload capture", "Administrative messages, not new fill evidence", "Earlier receipt confirmations do not cover these events", "No new log-filter inspection", "Bounded retrospective inspection outside signal windows, not continuous monitoring", "No external receiver configured; broker reconciliation unverified"]
+}
