@@ -105,3 +105,8 @@ The [November 18 observation](LIVE_DELIVERY_2026-11-18.md) records V7.5.3
 long-entry/long-stop and short-entry/short-target log examples, a retrospective
 09:59 browser card and a selected-field transcription. Push/sound, latency and
 exhaustive paths remain unverified; LSM LONG is pending.
+
+The [November 21 follow-up](LIVE_DELIVERY_2026-11-21.md) records November 19–20
+logs including a V7.5.3 long-target exit and refreshed LSM SHORT trigger timestamp.
+LSM SHORT message/receipt is not established by that timestamp; LSM LONG is
+pending. New-event channel/latency and complete-history limits remain unverified.
