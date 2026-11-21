@@ -218,3 +218,12 @@ receipts, original arrival/latency, the 09:59 entry's complete lifecycle,
 long-target/exhaustive paths and external reconciliation remain unverified.
 All four alerts were Active; LSM LONG remains pending. V7.4.2 and LSM SHORT
 latest-trigger values were unchanged. Prior receipt limits remain unresolved.
+
+The [November 21 inspection](tests/hosted/LIVE_DELIVERY_2026-11-21.md) adds
+November 19–20 logs including a specific V7.5.3 long-target exit, now observed.
+Reload reconciled stale strategy dates; all four alerts remained Active.
+LSM SHORT advanced to November 18 13:01 in inventory only; message, levels and
+receipt remain unverified. LSM LONG is pending. New-event channel receipt,
+latency, November 18 09:59 lifecycle, complete history, exhaustive paths and
+external reconciliation remain unverified. Earlier pending wording is historical
+for the specific newly observed long-target log example.
